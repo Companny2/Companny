@@ -174,6 +174,7 @@ body{
 .pill-btn img{
   width:22px;
   height:22px;
+  object-fit: contain;   /* 👈 CLAVE */
   background:white;
   border-radius:50%;
   padding:4px;
