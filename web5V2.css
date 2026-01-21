@@ -35,6 +35,7 @@ body{
   color:white;
   font-weight:bold;
   white-space:nowrap;
+  font-size: 1.4rem; /* 👈 AUMENTA PanaRepara */
 }
 
 /* NAV MENU */
