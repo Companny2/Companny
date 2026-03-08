@@ -1,100 +1,112 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Companny</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<link rel="icon" type="image/png" sizes="48x48" href="images/favicon.png">
+  <title>PanaRepara | Reparación de TVs, Laptops e Impresoras</title>
+  <link rel="icon" type="image/png" sizes="48x48" href="images/favicon.png" />
 
-<link rel="stylesheet" href="web5V2.css" />
+  <link rel="stylesheet" href="web5V2.css" />
 </head>
+<body>
 
-<header class="header">
-  <div class="header-left">
-    <img src="images/logo.png" class="logo-header" />
-    <a class="brand-box">PanaRepara</a>
+  <header class="header">
+    <div class="header-left">
+      <img src="images/logo.png" class="logo-header" alt="Logo PanaRepara" />
+      <a class="brand-box" href="#">PanaRepara</a>
+    </div>
+
+    <nav class="main-nav">
+      <ul>
+        <li><a href="#servicios">Servicios</a></li>
+        <li><a href="#contacto">Contacto</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <div id="zona-reparaciones">
+
+    <main class="contenedor-total" id="servicios">
+      <h1 class="titulo-servicio">¿Qué equipo deseas reparar?</h1>
+
+      <div class="services-container">
+
+        <div class="service-item">
+          <div class="item">
+            <img src="images/tv.jpg" alt="Reparación de televisores" />
+          </div>
+          <p class="service-label">Televisores</p>
+        </div>
+
+        <div class="service-item">
+          <div class="item">
+            <img src="images/consolas.png" alt="Reparación de videojuegos" />
+          </div>
+          <p class="service-label">Video Juegos</p>
+        </div>
+
+        <div class="service-item">
+          <div class="item">
+            <img src="images/Laptop.jpg" alt="Reparación de laptops" />
+          </div>
+          <p class="service-label">Laptops</p>
+        </div>
+
+        <div class="service-item">
+          <div class="item">
+            <img src="images/impresora-icon.jpg" alt="Reparación de impresoras" />
+          </div>
+          <p class="service-label">Impresoras</p>
+        </div>
+
+        <div class="service-item">
+          <div class="item">
+            <img src="images/bocina-icon.png" alt="Reparación de bocinas portátiles" />
+          </div>
+          <p class="service-label">Bocinas Portátiles</p>
+        </div>
+
+      </div>
+
+      <div id="panel-servicio" class="panel-servicio">
+        <button class="cerrar-panel" type="button">Cerrar ✖</button>
+        <h2 id="titulo-servicio"></h2>
+        <p id="descripcion-servicio"></p>
+      </div>
+    </main>
+
+    <section class="contacto" id="contacto">
+      <h2>Contacto</h2>
+      <p>¿Tienes alguna duda o quieres agendar un servicio?</p>
+
+      <div class="contact-pill-menu">
+
+        <a class="pill-btn pill-call" href="tel:+50760322222">
+          <img src="images/phone.png" alt="Llamar" />
+          <span>Llamar</span>
+        </a>
+
+        <a class="pill-btn pill-wa" href="https://wa.me/50760322222" target="_blank" rel="noopener noreferrer">
+          <img src="images/whatsapp.png" alt="WhatsApp" />
+          <span>WhatsApp</span>
+        </a>
+
+        <a class="pill-btn pill-ig" href="https://instagram.com/panarepara" target="_blank" rel="noopener noreferrer">
+          <img src="images/instagram.png" alt="Instagram" />
+          <span>@panarepara</span>
+        </a>
+
+        <a class="pill-btn pill-map" href="https://share.google/w3qHAE9vuQINRrgEQ" target="_blank" rel="noopener noreferrer">
+          <img src="images/location.png" alt="Ubicación" />
+          <span>Dirección</span>
+        </a>
+
+      </div>
+    </section>
+
   </div>
-  <nav class="main-nav">
-    <ul>
-      <li><a href="#servicios"></a></li>
-      <li><a href="#contacto"></a></li>
-    </ul>
-  </nav>
-</header>
 
-<div id="zona-reparaciones">
-
-<main class="contenedor-total" id="servicios">
-  <h1 class="titulo-servicio">¿Qué equipo deseas reparar?</h1>
-
-  <div class="services-container">
-
-    <div class="service-item">
-      <div class="item"><img src="images/tv.jpg" /></div>
-      <p class="service-label">Televisores</p>
-    </div>
-
-    <div class="service-item">
-      <div class="item"><img src="images/consolas.png" /></div>
-      <p class="service-label">Video Juegos</p>
-    </div>
-
-    <div class="service-item">
-      <div class="item"><img src="images/Laptop.jpg" /></div>
-      <p class="service-label">Laptops</p>
-    </div>
-
-    <div class="service-item">
-      <div class="item"><img src="images/impresora-icon.jpg" /></div>
-      <p class="service-label">Impresoras</p>
-    </div>
-
-    <div class="service-item">
-      <div class="item"><img src="images/bocina-icon.png" /></div>
-      <p class="service-label">Bocinas Portátiles</p>
-    </div>
-
-  </div>
-
-  <div id="panel-servicio" class="panel-servicio">
-    <button class="cerrar-panel">Cerrar ✖</button>
-    <h2 id="titulo-servicio"></h2>
-    <p id="descripcion-servicio"></p>
-  </div>
-</main>
-
-<section class="contacto" id="contacto">
-  <h2>Contacto</h2>
-  <p>¿Tienes alguna duda o quieres agendar un servicio?</p>
-
-  <div class="contact-pill-menu">
-
-    <a class="pill-btn pill-call" href="tel:+50760322222">
-      <img src="images/phone.png" />
-      <span>Llamar</span>
-    </a>
-
-    <a class="pill-btn pill-wa" href="https://wa.me/50760322222" target="_blank">
-      <img src="images/whatsapp.png" />
-      <span>WhatsApp</span>
-    </a>
-
-    <a class="pill-btn pill-ig" href="https://instagram.com/panarepara" target="_blank">
-      <img src="images/instagram.png" />
-      <span>@panarepara</span>
-    </a>
-
-    <a class="pill-btn pill-map" href="https://share.google/w3qHAE9vuQINRrgEQ" target="_blank">
-      <img src="images/location.png" />
-      <span>Dirección</span>
-    </a>
-
-  </div>
-</section>
-
-</div>
-
-<script src="web5V2.js"></script>
+  <script src="web5V2.js"></script>
 </body>
 </html>
