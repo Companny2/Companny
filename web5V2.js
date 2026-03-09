@@ -150,10 +150,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     activarSoloUnaTarjeta(tarjeta);
 
-    panelServicio.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
+    const y = panelServicio.getBoundingClientRect().top + window.pageYOffset - 95;
+
+window.scrollTo({
+  top: y,
+  behavior: 'smooth'
+});
   }
 
   function volverAVistaGeneral() {
