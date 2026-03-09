@@ -1,7 +1,97 @@
+/* -------------------- RESET GENERAL -------------------- */
+*{
+  box-sizing: border-box;
+}
+
+html{
+  scroll-behavior: smooth;
+}
+
+body{
+  margin: 0;
+  background: #f4f6f8;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #022444;
+}
+
+img{
+  max-width: 100%;
+  display: block;
+}
+
+a{
+  text-decoration: none;
+  color: inherit;
+}
+
+ul{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* -------------------- HEADER -------------------- */
+.header{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #022444;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+}
+
+.header-left{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.logo-header{
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+}
+
+.brand-box{
+  color: #ffffff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 14px;
+  line-height: 1;
+}
+
+.main-nav ul{
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+
+.main-nav a{
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1rem;
+  transition: opacity 0.2s ease;
+}
+
+.main-nav a:hover{
+  opacity: 0.8;
+}
+
+/* -------------------- CONTENEDOR GENERAL -------------------- */
+#zona-reparaciones{
+  width: 100%;
+}
+
+/* -------------------- HERO -------------------- */
 .hero{
   background: linear-gradient(135deg, #022444 0%, #0a3f73 100%);
   color: #ffffff;
-  padding: 70px 20px 60px;
+  padding: 72px 20px 64px;
   text-align: center;
 }
 
@@ -11,35 +101,37 @@
 }
 
 .hero h1{
+  margin: 0 0 10px;
   font-size: 3rem;
-  margin-bottom: 10px;
+  font-weight: 800;
 }
 
 .hero h2{
-  font-size: 1.8rem;
-  margin-bottom: 16px;
+  margin: 0 0 18px;
+  font-size: 1.9rem;
   font-weight: 700;
 }
 
 .hero p{
-  max-width: 700px;
-  margin: 0 auto 24px;
-  font-size: 1.1rem;
-  line-height: 1.6;
+  max-width: 760px;
+  margin: 0 auto 28px;
+  font-size: 1.08rem;
+  line-height: 1.7;
 }
 
 .hero-buttons{
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 14px;
   flex-wrap: wrap;
 }
 
 .hero-btn{
-  text-decoration: none;
-  padding: 14px 26px;
+  padding: 14px 28px;
   border-radius: 999px;
   font-weight: 700;
+  font-size: 1rem;
   display: inline-block;
 }
 
@@ -53,72 +145,272 @@
   color: #022444;
 }
 
+/* -------------------- SERVICIOS -------------------- */
+.contenedor-total{
+  max-width: 1250px;
+  margin: 0 auto;
+  padding: 56px 20px 30px;
+}
+
+.titulo-servicio{
+  text-align: center;
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #022444;
+  margin: 0 0 38px;
+}
+
+.services-container{
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 34px;
+  flex-wrap: wrap;
+}
+
+.service-item{
+  width: 190px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.item{
+  width: 100%;
+  height: 175px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.10);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.item:hover{
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(0,0,0,0.14);
+}
+
+.item img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.service-label{
+  margin: 14px 0 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #022444;
+}
+
+/* -------------------- PANEL DE SERVICIO -------------------- */
+.panel-servicio{
+  display: none;
+  max-width: 840px;
+  margin: 40px auto 0;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+  color: #1f2a37;
+}
+
+.panel-servicio.activo{
+  display: block;
+}
+
+.cerrar-panel{
+  background: #022444;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+#titulo-servicio{
+  margin: 0 0 12px;
+  color: #022444;
+  font-size: 1.6rem;
+}
+
+#descripcion-servicio{
+  margin: 0;
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+/* -------------------- SEO INFO -------------------- */
 .seo-info{
-  padding: 30px 20px 10px;
+  padding: 18px 20px 8px;
 }
 
 .seo-box{
   max-width: 1000px;
   margin: 0 auto;
   background: #ffffff;
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  border-radius: 22px;
+  padding: 30px 26px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
 .seo-box h2{
-  color: #022444;
-  margin-bottom: 16px;
+  margin: 0 0 16px;
   text-align: center;
+  color: #022444;
+  font-size: 2rem;
 }
 
 .seo-box p{
-  color: #1f2a37;
-  line-height: 1.7;
-  margin-bottom: 14px;
+  margin: 0 0 14px;
   text-align: center;
+  color: #334155;
+  line-height: 1.8;
+  font-size: 1rem;
 }
 
+/* -------------------- BENEFICIOS -------------------- */
 .porque-elegirnos{
-  padding: 30px 20px 20px;
+  padding: 38px 20px 24px;
 }
 
 .porque-elegirnos h2{
   text-align: center;
   color: #022444;
-  margin-bottom: 24px;
+  margin: 0 0 26px;
+  font-size: 2.2rem;
 }
 
 .beneficios-grid{
-  max-width: 1100px;
+  max-width: 1150px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px;
 }
 
 .beneficio-card{
   background: #ffffff;
-  border-radius: 18px;
-  padding: 22px 18px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+  border-radius: 20px;
+  padding: 24px 18px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
   text-align: center;
 }
 
 .beneficio-card h3{
+  margin: 0 0 10px;
   color: #022444;
-  margin-bottom: 10px;
   font-size: 1.1rem;
 }
 
 .beneficio-card p{
+  margin: 0;
   color: #374151;
-  line-height: 1.6;
+  line-height: 1.7;
+  font-size: 0.98rem;
+}
+
+/* -------------------- CONTACTO -------------------- */
+.contacto{
+  padding: 52px 20px 70px;
+  text-align: center;
+}
+
+.contacto h2{
+  margin: 0 0 10px;
+  color: #022444;
+  font-size: 2.2rem;
+}
+
+.contacto p{
+  margin: 0 0 26px;
+  color: #1f2a37;
+  font-size: 1.05rem;
+}
+
+.contact-pill-menu{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pill-btn{
+  min-width: 170px;
+  padding: 14px 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+}
+
+.pill-btn img{
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 3px;
+}
+
+.pill-call{
+  background: linear-gradient(135deg, #0a84ff, #0066d6);
+}
+
+.pill-wa{
+  background: linear-gradient(135deg, #2ad760, #16b84e);
+}
+
+.pill-ig{
+  background: linear-gradient(135deg, #f9ce34, #ee2a7b, #6228d7);
+}
+
+.pill-map{
+  background: linear-gradient(135deg, #ffb347, #ff9800);
+  color: #022444;
+}
+
+/* -------------------- RESPONSIVE -------------------- */
+@media (max-width: 1024px){
+  .beneficios-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px){
+  .header{
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .header-left{
+    width: 100%;
+    justify-content: center;
+  }
+
+  .main-nav ul{
+    gap: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .brand-box{
+    font-size: 1.4rem;
+  }
+
   .hero{
-    padding: 55px 18px 50px;
+    padding: 58px 18px 52px;
   }
 
   .hero h1{
@@ -133,7 +425,48 @@
     font-size: 1rem;
   }
 
+  .titulo-servicio{
+    font-size: 2rem;
+  }
+
+  .service-item{
+    width: 160px;
+  }
+
+  .item{
+    height: 150px;
+  }
+
   .seo-box{
-    padding: 22px 18px;
+    padding: 24px 18px;
+  }
+
+  .seo-box h2{
+    font-size: 1.5rem;
+  }
+
+  .porque-elegirnos h2,
+  .contacto h2{
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 560px){
+  .beneficios-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .service-item{
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .item{
+    height: 170px;
+  }
+
+  .pill-btn{
+    width: 100%;
+    max-width: 280px;
   }
 }
