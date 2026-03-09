@@ -133,6 +133,12 @@ ul{
   font-weight: 700;
   font-size: 1rem;
   display: inline-block;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.hero-btn:hover{
+  transform: translateY(-2px);
+  opacity: 0.96;
 }
 
 .hero-btn-wa{
@@ -145,67 +151,7 @@ ul{
   color: #022444;
 }
 
-/* -------------------- SERVICIOS -------------------- */
-.contenedor-total{
-  max-width: 1250px;
-  margin: 0 auto;
-  padding: 56px 20px 30px;
-}
-
-.titulo-servicio{
-  text-align: center;
-  font-size: 2.8rem;
-  font-weight: 800;
-  color: #022444;
-  margin: 0 0 38px;
-}
-
-.services-container{
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 34px;
-  flex-wrap: wrap;
-}
-
-.service-item{
-  width: 190px;
-  text-align: center;
-  cursor: pointer;
-}
-
-.item{
-  width: 100%;
-  height: 175px;
-  background: #ffffff;
-  border-radius: 24px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.10);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 14px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.item:hover{
-  transform: translateY(-4px);
-  box-shadow: 0 16px 32px rgba(0,0,0,0.14);
-}
-
-.item img{
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.service-label{
-  margin: 14px 0 0;
-  font-size: 1rem;
-  font-weight: 800;
-  color: #022444;
-}
-
-/* -------------------- PANEL DE SERVICIO -------------------- */
+/* -------------------- EQUIPOS -------------------- */
 .equipos-section{
   padding: 40px 20px 20px;
 }
@@ -234,7 +180,7 @@ ul{
   padding: 22px 18px 18px;
   text-align: center;
   cursor: pointer;
-  transition: transform .25s ease, box-shadow .25s ease, opacity .25s ease;
+  transition: transform .25s ease, box-shadow .25s ease, opacity .25s ease, outline .25s ease;
   box-shadow: 0 4px 14px rgba(0,0,0,0.05);
 }
 
@@ -248,7 +194,6 @@ ul{
   max-width: 190px;
   height: 150px;
   object-fit: contain;
-  display: block;
   margin: 0 auto 16px;
 }
 
@@ -259,10 +204,17 @@ ul{
   font-weight: 800;
 }
 
+.equipo-card.activo{
+  transform: translateY(-5px);
+  box-shadow: 0 16px 30px rgba(0,0,0,0.14);
+  outline: 3px solid rgba(10,132,255,0.18);
+}
+
 .equipo-card.oculto{
   display: none;
 }
 
+/* -------------------- PANEL DE SERVICIO -------------------- */
 .panel-servicio{
   max-width: 1250px;
   margin: 38px auto 0;
@@ -270,6 +222,11 @@ ul{
   border-radius: 30px;
   padding: 42px 36px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+
+.panel-default,
+.panel-detalle{
+  transition: opacity 0.25s ease;
 }
 
 .panel-default h2,
@@ -289,6 +246,15 @@ ul{
   color: #26425f;
   max-width: 1000px;
   margin: 0 auto 16px;
+}
+
+.panel-detalle{
+  text-align: left;
+}
+
+.panel-detalle h2,
+.panel-detalle > p{
+  text-align: center;
 }
 
 .hidden{
@@ -311,6 +277,10 @@ ul{
 .btn-volver:hover{
   opacity: .92;
   transform: translateY(-2px);
+}
+
+.casos-reales-wrap{
+  margin-top: 10px;
 }
 
 .subtitulo-panel{
@@ -348,6 +318,7 @@ ul{
   font-size: 0.98rem;
   line-height: 1.7;
   text-align: left;
+  max-width: none;
 }
 
 .form-servicio{
@@ -426,66 +397,6 @@ ul{
 .btn-llamar-form:hover{
   transform: translateY(-2px);
   opacity: .95;
-}
-
-@media (max-width: 1200px){
-  .equipos-grid{
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
-  }
-
-  .casos-reales{
-    grid-template-columns: repeat(2, minmax(220px, 1fr));
-  }
-}
-
-@media (max-width: 768px){
-  .equipos-titulo{
-    font-size: 2.1rem;
-  }
-
-  .equipos-grid{
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
-    gap: 18px;
-  }
-
-  .equipo-card{
-    border-radius: 22px;
-    padding: 18px 14px;
-  }
-
-  .equipo-card img{
-    max-width: 140px;
-    height: 110px;
-  }
-
-  .panel-servicio{
-    padding: 26px 18px;
-    border-radius: 24px;
-  }
-
-  .panel-default h2,
-  .panel-detalle h2{
-    font-size: 1.6rem;
-  }
-
-  .panel-default p,
-  .panel-detalle p{
-    font-size: 1rem;
-    line-height: 1.7;
-  }
-
-  .casos-reales{
-    grid-template-columns: 1fr;
-  }
-
-  .acciones-servicio{
-    flex-direction: column;
-  }
-
-  .btn-wa-form,
-  .btn-llamar-form{
-    width: 100%;
-  }
 }
 
 /* -------------------- SEO INFO -------------------- */
@@ -596,6 +507,12 @@ ul{
   font-size: 0.98rem;
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.pill-btn:hover{
+  transform: translateY(-2px);
+  opacity: 0.96;
 }
 
 .pill-btn img{
@@ -620,11 +537,21 @@ ul{
 }
 
 .pill-map{
-background: linear-gradient(135deg,#34a853,#4285f4);
-color:white;
+  background: linear-gradient(135deg,#34a853,#4285f4);
+  color: #ffffff;
 }
 
 /* -------------------- RESPONSIVE -------------------- */
+@media (max-width: 1200px){
+  .equipos-grid{
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+
+  .casos-reales{
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+}
+
 @media (max-width: 1024px){
   .beneficios-grid{
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -669,16 +596,52 @@ color:white;
     font-size: 1rem;
   }
 
-  .titulo-servicio{
-    font-size: 2rem;
+  .equipos-titulo{
+    font-size: 2.1rem;
   }
 
-  .service-item{
-    width: 160px;
+  .equipos-grid{
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+    gap: 18px;
   }
 
-  .item{
-    height: 150px;
+  .equipo-card{
+    border-radius: 22px;
+    padding: 18px 14px;
+  }
+
+  .equipo-card img{
+    max-width: 140px;
+    height: 110px;
+  }
+
+  .panel-servicio{
+    padding: 26px 18px;
+    border-radius: 24px;
+  }
+
+  .panel-default h2,
+  .panel-detalle h2{
+    font-size: 1.6rem;
+  }
+
+  .panel-default p,
+  .panel-detalle p{
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .casos-reales{
+    grid-template-columns: 1fr;
+  }
+
+  .acciones-servicio{
+    flex-direction: column;
+  }
+
+  .btn-wa-form,
+  .btn-llamar-form{
+    width: 100%;
   }
 
   .seo-box{
@@ -698,15 +661,6 @@ color:white;
 @media (max-width: 560px){
   .beneficios-grid{
     grid-template-columns: 1fr;
-  }
-
-  .service-item{
-    width: 100%;
-    max-width: 220px;
-  }
-
-  .item{
-    height: 170px;
   }
 
   .pill-btn{
