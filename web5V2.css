@@ -222,6 +222,7 @@ ul{
   border-radius: 30px;
   padding: 42px 36px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  scroll-margin-top: 110px;
 }
 
 .panel-default,
@@ -250,6 +251,7 @@ ul{
 
 .panel-detalle{
   text-align: left;
+  padding-top: 8px;
 }
 
 .panel-detalle h2,
@@ -270,7 +272,7 @@ ul{
   font-size: 0.98rem;
   font-weight: 700;
   cursor: pointer;
-  margin-bottom: 26px;
+  margin-bottom: 34px;
   transition: opacity .2s ease, transform .2s ease;
 }
 
