@@ -33,9 +33,9 @@ ul{
 /* -------------------- HEADER -------------------- */
 .header{
 display:flex;
-justify-content:space-between;
 align-items:center;
-padding:12px 40px;
+justify-content:space-between;
+padding:15px 40px;
 background:#022444;
 }
 
@@ -46,7 +46,7 @@ background:#022444;
 }
 
 .logo-header{
-height:48px;
+height:70px;
 width:auto;
 }
 
