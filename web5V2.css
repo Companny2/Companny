@@ -32,15 +32,11 @@ ul{
 
 /* -------------------- HEADER -------------------- */
 .header{
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: #022444;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:12px 40px;
+background:#022444;
 }
 
 .header-left{
@@ -50,9 +46,8 @@ ul{
 }
 
 .logo-header{
-  width: 44px;
-  height: 44px;
-  object-fit: contain;
+height:48px;
+width:auto;
 }
 
 .brand-box{
