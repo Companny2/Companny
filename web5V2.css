@@ -40,14 +40,15 @@ background:#022444;
 }
 
 .header-left{
-  display: flex;
-  align-items: center;
-  gap: 14px;
+background:#297189;
+padding:8px 12px;
+border-radius:6px;
 }
 
 .logo-header{
-height:70px;
+height:65px;
 width:auto;
+background:#297189;
 }
 
 .brand-box{
