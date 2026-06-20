@@ -131,9 +131,8 @@ ul{ list-style: none; margin: 0; padding: 0; }
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(720px 360px at 18% 8%, rgba(79,209,255,.20), transparent 60%),
-    radial-gradient(820px 420px at 85% 0%, rgba(41,113,137,.45), transparent 62%),
-    linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+    linear-gradient(135deg, rgba(15,74,94,.52) 0%, rgba(33,120,142,.42) 100%),
+    url("images/local.jpg") center 35% / cover no-repeat;
   color: #ffffff;
   padding: 96px 20px 84px;
   text-align: center;
@@ -174,6 +173,7 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 
 .hero-content{ position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
+.hero h1, .hero h2, .hero p{ text-shadow: 0 2px 16px rgba(0,0,0,.55); }
 
 .hero h1{
   margin: 0 0 10px;
