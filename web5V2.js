@@ -23,9 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const dataServicios = {
     televisores: {
       nombre: 'Televisores',
-      titulo: 'Reparación de televisores en El Dorado, Ciudad de Panamá',
-      descripcion: 'Diagnóstico y reparación de televisores LED, Smart TV y pantallas con fallas de imagen, retroiluminación, audio, fuente de poder y tarjeta principal. Atendemos en Centro Comercial El Dorado, segundo piso, local 52A.',
-      marcas: ['Samsung', 'LG', 'Sony', 'Hisense', 'TCL', 'Philips', 'Panasonic', 'RCA'],
+      titulo: 'Reparación de televisores Samsung y LG en El Dorado, Ciudad de Panamá',
+      descripcion: 'Diagnóstico y reparación de televisores Samsung y LG (LED y Smart TV) con fallas de imagen, retroiluminación, audio, fuente de poder y tarjeta principal. Atendemos en Centro Comercial El Dorado, Torre Norte, Nivel Amarillo, local 52A.',
+      marcas: ['Samsung', 'LG'],
+      ejemploModelo: 'Ejemplo: Samsung UN55TU7000 / LG 50UP7750',
+      ejemploFalla: 'Ejemplo: no da imagen, pantalla oscura, no enciende, líneas en la pantalla, sin sonido, etc.',
       casos: [
         { titulo: 'TV sin imagen', texto: 'Revisión de retroiluminación, tiras LED, driver y fuente de poder.' },
         { titulo: 'TV no enciende', texto: 'Diagnóstico de standby, fusibles, fuente primaria y componentes dañados.' },
@@ -33,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ]
     },
 
+    /* SERVICIO SUSPENDIDO (2026-06-19): Videojuegos. Para reactivar, descomentar este bloque
+       y la tarjeta correspondiente en index.html.
     videojuegos: {
       nombre: 'Video Juegos',
       titulo: 'Reparación de consolas en El Dorado, Ciudad de Panamá',
@@ -44,12 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
         { titulo: 'Sobrecalentamiento', texto: 'Cambio de pasta térmica y limpieza profunda.' }
       ]
     },
+    */
 
     laptops: {
       nombre: 'Laptops',
       titulo: 'Reparación de laptops en El Dorado, Ciudad de Panamá',
-      descripcion: 'Diagnóstico y reparación de laptops con fallas de encendido, video, carga, teclado, batería, bisagras y sobrecalentamiento.',
-      marcas: ['HP', 'Dell', 'Lenovo', 'Asus', 'Acer', 'Apple', 'MSI', 'Toshiba'],
+      descripcion: 'Diagnóstico y reparación de laptops y laptops gamer (Dell, HP, Asus, Lenovo y MacBook) con fallas de encendido, video, carga, teclado, batería, bisagras y sobrecalentamiento.',
+      marcas: ['Dell', 'HP', 'Asus', 'Lenovo', 'MacBook'],
+      ejemploModelo: 'Ejemplo: HP Pavilion 15 / MacBook Air 2017',
+      ejemploFalla: 'Ejemplo: no enciende, no carga, pantalla negra, se sobrecalienta, falla el teclado, lenta, etc.',
       casos: [
         { titulo: 'Laptop no enciende', texto: 'Revisión de entrada DC, circuito de carga y etapas primarias.' },
         { titulo: 'Laptop sin video', texto: 'Diagnóstico de memoria, BIOS, pantalla, flex y video.' },
@@ -60,8 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     impresoras: {
       nombre: 'Impresoras',
       titulo: 'Reparación de impresoras en El Dorado, Ciudad de Panamá',
-      descripcion: 'Servicio técnico especializado en impresoras Epson, HP, Canon y Brother. Realizamos cambio de cabezales, limpieza profunda, solución de errores de tinta, mantenimiento y reseteo de almohadillas.',
-      marcas: ['Epson', 'HP', 'Canon', 'Brother'],
+      descripcion: 'Servicio técnico especializado en impresoras Epson, HP y Canon. Realizamos cambio de cabezales, limpieza profunda, solución de errores de tinta, mantenimiento y reseteo de almohadillas.',
+      marcas: ['Epson', 'HP', 'Canon'],
+      ejemploModelo: 'Ejemplo: Epson L3250 / Canon G2110',
+      ejemploFalla: 'Ejemplo: no imprime negro, presenta líneas, no reconoce cartuchos, error de almohadillas, no enciende, etc.',
       casos: [
         { titulo: 'Cambio de cabezal', texto: 'Reemplazo y prueba de cabezal en impresoras con líneas o falta de color.' },
         { titulo: 'Limpieza profunda', texto: 'Limpieza interna, estación de servicio, sistema de tinta y mantenimiento.' },
@@ -70,10 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
     },
 
     bocinas: {
-      nombre: 'Bocinas Portátiles',
-      titulo: 'Reparación de bocinas portátiles en El Dorado, Ciudad de Panamá',
-      descripcion: 'Diagnóstico y reparación de bocinas con fallas de carga, batería, Bluetooth, distorsión de audio y conectores dañados.',
-      marcas: ['JBL', 'Bose', 'Sony', 'LG', 'Anker', 'Marshall'],
+      nombre: 'Bocinas Bose',
+      titulo: 'Reparación de bocinas Bose en El Dorado, Ciudad de Panamá',
+      descripcion: 'Diagnóstico y reparación de bocinas portátiles Bose con fallas de carga, batería, Bluetooth, distorsión de audio y conectores dañados.',
+      marcas: ['Bose'],
+      ejemploModelo: 'Ejemplo: Bose SoundLink Flex / Bose S1 Pro',
+      ejemploFalla: 'Ejemplo: no carga, no enciende, audio distorsionado, Bluetooth inestable, sin sonido, etc.',
       casos: [
         { titulo: 'Bocina no carga', texto: 'Revisión de batería, puerto de carga y circuito de alimentación.' },
         { titulo: 'Audio distorsionado', texto: 'Diagnóstico de parlantes, amplificación y sistema interno.' },
@@ -144,6 +155,10 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarMarcas(servicio.marcas);
     cargarCasos(servicio.casos);
     limpiarFormulario();
+
+    // Ejemplos del formulario según el equipo seleccionado
+    modeloEquipo.placeholder = servicio.ejemploModelo || 'Ejemplo: marca y modelo del equipo';
+    fallaEquipo.placeholder = servicio.ejemploFalla || 'Describe brevemente la falla que presenta';
 
     panelDefault.classList.add('hidden');
     panelDetalle.classList.remove('hidden');
