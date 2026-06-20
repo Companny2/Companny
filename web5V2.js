@@ -114,14 +114,28 @@ document.addEventListener('DOMContentLoaded', () => {
     casosReales.innerHTML = '';
 
     casos.forEach(caso => {
-      const card = document.createElement('div');
+      const card = document.createElement('button');
+      card.type = 'button';
       card.className = 'caso-card';
       card.innerHTML = `
         <h4>${caso.titulo}</h4>
         <p>${caso.texto}</p>
+        <span class="caso-usar">Usar en mi mensaje →</span>
       `;
+      card.addEventListener('click', () => usarCaso(caso));
       casosReales.appendChild(card);
     });
+  }
+
+  function usarCaso(caso) {
+    // Precarga el caso en el resumen de la falla para enviarlo sin escribir
+    fallaEquipo.value = caso.titulo;
+
+    const y = panelServicio.getBoundingClientRect().top + window.pageYOffset - 95;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+
+    fallaEquipo.classList.add('campo-resaltado');
+    setTimeout(() => fallaEquipo.classList.remove('campo-resaltado'), 1400);
   }
 
   function activarSoloUnaTarjeta(tarjetaActiva) {
@@ -205,4 +219,64 @@ window.scrollTo({
 
     window.open(`https://wa.me/${telefonoWhatsApp}?text=${mensaje}`, '_blank');
   });
+
+  // -------------------- Carrusel de trabajos --------------------
+  const carousel = document.getElementById('galeriaCarousel');
+
+  if (carousel) {
+    const totalFotos = parseInt(carousel.dataset.fotos, 10) || 0;
+    const dotsWrap = carousel.querySelector('#carouselDots');
+    const reducirMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Construir las fotos del carrusel
+    const slides = [];
+    for (let i = 1; i <= totalFotos; i++) {
+      const slide = document.createElement('div');
+      slide.className = 'slide' + (i === 1 ? ' active' : '');
+      const img = document.createElement('img');
+      img.src = 'images/galeria-' + String(i).padStart(2, '0') + '.jpg';
+      img.alt = 'Trabajo de reparación realizado en PanaRepara';
+      img.loading = i <= 2 ? 'eager' : 'lazy';
+      img.decoding = 'async';
+      slide.appendChild(img);
+      carousel.insertBefore(slide, carousel.querySelector('.carousel-prev'));
+      slides.push(slide);
+    }
+
+    let actual = 0;
+    let timer = null;
+
+    slides.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.type = 'button';
+      dot.setAttribute('aria-label', 'Ver foto ' + (i + 1));
+      dot.addEventListener('click', () => { mostrar(i); reiniciar(); });
+      dotsWrap.appendChild(dot);
+    });
+    const dots = [...dotsWrap.children];
+
+    function mostrar(i) {
+      actual = (i + slides.length) % slides.length;
+      slides.forEach((s, idx) => s.classList.toggle('active', idx === actual));
+      dots.forEach((d, idx) => d.classList.toggle('active', idx === actual));
+    }
+
+    function siguiente() { mostrar(actual + 1); }
+
+    function iniciar() {
+      if (reducirMovimiento) return;
+      timer = setInterval(siguiente, 3500);
+    }
+
+    function reiniciar() { clearInterval(timer); iniciar(); }
+
+    mostrar(0);
+    iniciar();
+
+    carousel.querySelector('.carousel-next').addEventListener('click', () => { siguiente(); reiniciar(); });
+    carousel.querySelector('.carousel-prev').addEventListener('click', () => { mostrar(actual - 1); reiniciar(); });
+
+    carousel.addEventListener('mouseenter', () => clearInterval(timer));
+    carousel.addEventListener('mouseleave', iniciar);
+  }
 });
