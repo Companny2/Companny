@@ -423,6 +423,10 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .hidden{ display: none; }
 
 .btn-volver{
+  position: sticky;
+  top: calc(var(--header-h) + 10px);
+  z-index: 90;
+  align-self: flex-start;
   background: var(--navy);
   color: #ffffff;
   border: none;
@@ -432,9 +436,10 @@ ul{ list-style: none; margin: 0; padding: 0; }
   font-weight: 700;
   cursor: pointer;
   margin-bottom: 34px;
+  box-shadow: 0 6px 18px rgba(2,36,68,.30);
   transition: opacity .2s ease, transform .2s ease;
 }
-.btn-volver:hover{ opacity: .92; transform: translateY(-2px); }
+.btn-volver:hover{ opacity: .92; }
 
 .casos-reales-wrap{ margin-top: 10px; }
 

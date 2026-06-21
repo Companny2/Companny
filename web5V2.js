@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelDefault = document.getElementById('panelDefault');
   const panelDetalle = document.getElementById('panelDetalle');
 
-  const tituloDetalle = document.getElementById('tituloDetalle');
   const descripcionDetalle = document.getElementById('descripcionDetalle');
   const casosReales = document.getElementById('casosReales');
 
@@ -163,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     equipoActivo = servicio.nombre;
 
-    tituloDetalle.textContent = servicio.titulo;
     descripcionDetalle.textContent = servicio.descripcion;
 
     cargarMarcas(servicio.marcas);
@@ -193,6 +191,13 @@ window.scrollTo({
     panelDefault.classList.remove('hidden');
     mostrarTodasLasTarjetas();
     limpiarFormulario();
+
+    // Reposiciona la vista en las categorías para que queden centradas/visibles
+    const seccion = document.getElementById('servicios');
+    if (seccion) {
+      const y = seccion.getBoundingClientRect().top + window.pageYOffset - 80;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
   }
 
   tarjetas.forEach(tarjeta => {
