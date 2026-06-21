@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" />
 
-  <link rel="stylesheet" href="web5V2.css?v=14" />
+  <link rel="stylesheet" href="web5V2.css?v=20" />
 
   <script type="application/ld+json">
   {
@@ -139,7 +139,6 @@
 
     <nav class="nav">
         <a href="#servicios">Servicios</a>
-        <a href="#por-que">Por qué elegirnos</a>
         <a href="#contacto">Contacto</a>
         <a href="https://wa.me/50760322222" class="nav-cta" target="_blank" rel="noopener noreferrer">WhatsApp</a>
     </nav>
@@ -150,28 +149,19 @@
   <div id="zona-reparaciones">
 
     <section class="hero" id="inicio">
-      <div class="hero-content">
-        <h1>PanaRepara</h1>
-        <h2>Servicio técnico en Panamá</h2>
-        <p>
-          Reparamos televisores, laptops, impresoras y bocinas portátiles
-          con atención rápida y trato profesional.
-        </p>
-        <div class="hero-buttons">
-          <a class="hero-btn hero-btn-wa" href="https://wa.me/50760322222" target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp</a>
-          <a class="hero-btn hero-btn-call" href="tel:+50760322222">Llamar ahora</a>
-        </div>
-      </div>
+      <!-- Mini badge de reseñas de Google sobre el banner -->
+      <a class="gr-badge" href="https://maps.app.goo.gl/Th9mKU1Rsigx52X9A" target="_blank" rel="noopener noreferrer" aria-label="4.5 estrellas en Google — ver reseñas">
+        <svg class="gr-glogo" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+          <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+          <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+          <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
+          <path fill="#EA4335" d="M24 9.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 2.99 29.93 1 24 1 15.4 1 7.96 5.93 4.34 13.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+        </svg>
+        <span class="gr-badge-num">4.5</span>
+        <span class="resena-stars" style="--rating:4.5" aria-hidden="true"></span>
+        <span class="gr-badge-text">en Google</span>
+      </a>
     </section>
-
-    <!-- Franja de confianza -->
-    <div class="trust-bar">
-      <ul>
-        <li>Diagnóstico profesional</li>
-        <li>Atención rápida por WhatsApp</li>
-        <li>El Dorado, Ciudad de Panamá</li>
-      </ul>
-    </div>
 
     <section class="equipos-section" id="servicios">
       <span class="section-eyebrow">Nuestros servicios</span>
@@ -259,42 +249,6 @@
       </div>
     </section>
 
-    <section class="porque-elegirnos" id="por-que">
-      <h2>¿Por qué elegir PanaRepara?</h2>
-
-      <div class="porque-layout">
-      <div class="beneficios-grid">
-        <div class="beneficio-card">
-          <div class="beneficio-icon">🔧</div>
-          <h3>Diagnóstico profesional</h3>
-          <p>Evaluamos tu equipo con criterio técnico para detectar la falla real.</p>
-        </div>
-
-        <div class="beneficio-card">
-          <div class="beneficio-icon">⚡</div>
-          <h3>Atención rápida</h3>
-          <p>Te respondemos por WhatsApp o llamada para orientarte y agendar.</p>
-        </div>
-
-        <div class="beneficio-card">
-          <div class="beneficio-icon">🛠️</div>
-          <h3>Servicios especializados</h3>
-          <p>Trabajamos con televisores, impresoras, laptops y bocinas Bose.</p>
-        </div>
-
-        <div class="beneficio-card">
-          <div class="beneficio-icon">📍</div>
-          <h3>Ubicación accesible</h3>
-          <p>Estamos en el Centro Comercial El Dorado, Torre Norte (Nivel Amarillo), fácil de encontrar. Atendemos de lunes a sábado, 9:00 am – 6:00 pm.</p>
-        </div>
-      </div>
-
-        <div class="porque-fotos">
-          <img src="images/galeria-01.jpg" alt="Diagnóstico y reparación de equipos en PanaRepara" loading="lazy" decoding="async">
-        </div>
-      </div>
-    </section>
-
     <section class="trabajos" id="trabajos">
       <span class="section-eyebrow">Nuestro trabajo</span>
       <h2>Trabajos reales</h2>
@@ -307,59 +261,44 @@
       </div>
     </section>
 
-    <section class="resenas" id="resenas">
-      <span class="section-eyebrow">Opiniones reales</span>
-      <h2>Lo que dicen nuestros clientes</h2>
-
-      <div class="resena-resumen">
-        <div class="resena-score">
-          <span class="resena-num">4.5</span>
-          <span class="resena-stars" style="--rating:4.5" aria-label="4.5 de 5 estrellas"></span>
-          <span class="resena-sub">Calificación en Google</span>
-        </div>
-        <a class="resena-btn" href="https://maps.app.goo.gl/Th9mKU1Rsigx52X9A" target="_blank" rel="noopener noreferrer">Ver reseñas en Google</a>
-      </div>
-
-      <div class="resenas-grid" id="resenasGrid">
-        <!-- Las tarjetas de reseñas reales se agregan aquí -->
-      </div>
-    </section>
-
     <section class="faq" id="faq">
       <span class="section-eyebrow">Resolvemos tus dudas</span>
-      <h2>Preguntas frecuentes</h2>
 
-      <div class="faq-list">
-        <details>
-          <summary>¿Qué equipos repara PanaRepara?</summary>
-          <p>Reparamos televisores Samsung y LG, laptops y laptops gamer (Dell, HP, Asus, Lenovo y MacBook), impresoras Epson, HP y Canon, y bocinas Bose.</p>
-        </details>
+      <details class="faq-master">
+        <summary>Preguntas frecuentes</summary>
 
-        <details>
-          <summary>¿Dónde está ubicado PanaRepara?</summary>
-          <p>Estamos en el Centro Comercial El Dorado, Torre Norte, Nivel Amarillo, local 52A, Ciudad de Panamá. Es el primer local a la derecha al subir.</p>
-        </details>
+        <div class="faq-list">
+          <details name="faq-item">
+            <summary>¿Qué equipos repara PanaRepara?</summary>
+            <p>Reparamos televisores Samsung y LG, laptops y laptops gamer (Dell, HP, Asus, Lenovo y MacBook), impresoras Epson, HP y Canon, y bocinas Bose.</p>
+          </details>
 
-        <details>
-          <summary>¿Cuál es el horario de atención?</summary>
-          <p>Atendemos de lunes a sábado, de 9:00 am a 6:00 pm.</p>
-        </details>
+          <details name="faq-item">
+            <summary>¿Dónde está ubicado PanaRepara?</summary>
+            <p>Estamos en el Centro Comercial El Dorado, Torre Norte, Nivel Amarillo, local 52A, Ciudad de Panamá. Es el primer local a la derecha al subir.</p>
+          </details>
 
-        <details>
-          <summary>¿Realizan diagnóstico del equipo?</summary>
-          <p>Sí. Hacemos un diagnóstico profesional para detectar la falla real. El diagnóstico tiene un costo que te informamos antes de proceder.</p>
-        </details>
+          <details name="faq-item">
+            <summary>¿Cuál es el horario de atención?</summary>
+            <p>Atendemos de lunes a sábado, de 9:00 am a 6:00 pm.</p>
+          </details>
 
-        <details>
-          <summary>¿Las reparaciones tienen garantía?</summary>
-          <p>Sí, ofrecemos garantía en nuestras reparaciones para que quedes tranquilo con el servicio.</p>
-        </details>
+          <details name="faq-item">
+            <summary>¿Realizan diagnóstico del equipo?</summary>
+            <p>Sí. Hacemos un diagnóstico profesional para detectar la falla real. El diagnóstico tiene un costo que te informamos antes de proceder.</p>
+          </details>
 
-        <details>
-          <summary>¿Cómo agendo una reparación?</summary>
-          <p>Escríbenos por WhatsApp al +507 6032-2222 indicando la marca, el modelo y la falla de tu equipo. Te orientamos y agendamos tu reparación.</p>
-        </details>
-      </div>
+          <details name="faq-item">
+            <summary>¿Las reparaciones tienen garantía?</summary>
+            <p>Sí, ofrecemos garantía en nuestras reparaciones para que quedes tranquilo con el servicio.</p>
+          </details>
+
+          <details name="faq-item">
+            <summary>¿Cómo agendo una reparación?</summary>
+            <p>Escríbenos por WhatsApp al +507 6032-2222 indicando la marca, el modelo y la falla de tu equipo. Te orientamos y agendamos tu reparación.</p>
+          </details>
+        </div>
+      </details>
     </section>
 
     <section class="contacto" id="contacto">
