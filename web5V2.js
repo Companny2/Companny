@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelDefault = document.getElementById('panelDefault');
   const panelDetalle = document.getElementById('panelDetalle');
 
-  const descripcionDetalle = document.getElementById('descripcionDetalle');
   const casosReales = document.getElementById('casosReales');
 
   const marcaEquipo = document.getElementById('marcaEquipo');
@@ -161,8 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!servicio) return;
 
     equipoActivo = servicio.nombre;
-
-    descripcionDetalle.textContent = servicio.descripcion;
 
     cargarMarcas(servicio.marcas);
     cargarCasos(servicio.casos);
