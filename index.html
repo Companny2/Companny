@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" />
 
-  <link rel="stylesheet" href="web5V2.css?v=35" />
+  <link rel="stylesheet" href="web5V2.css?v=36" />
 
   <script type="application/ld+json">
   {
@@ -138,12 +138,6 @@
     </a>
 
     <nav class="nav">
-        <span class="exp-badge" aria-label="8 años de experiencia">
-          <svg class="exp-badge-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-            <path fill="currentColor" d="M12 1.8l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.1l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 1.8z"/>
-          </svg>
-          <span class="exp-badge-text"><strong>8 años</strong> de experiencia</span>
-        </span>
         <a href="#servicios">Servicios</a>
         <a href="#contacto">Contacto</a>
         <a href="https://wa.me/50760322222" class="nav-cta" target="_blank" rel="noopener noreferrer">WhatsApp</a>
@@ -152,22 +146,40 @@
   </div>
 </header>
 
+  <!-- Distintivos fijos debajo del header (no se mueven con el scroll) -->
+  <div class="top-badges" role="group" aria-label="Distintivos de PanaRepara">
+
+    <span class="tbadge tbadge-exp" aria-label="8 años de experiencia">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+        <path fill="currentColor" d="M12 1.8l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.1l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 1.8z"/>
+      </svg>
+      <span><strong>8 años</strong> de experiencia</span>
+    </span>
+
+    <a class="tbadge tbadge-google" href="https://maps.app.goo.gl/Th9mKU1Rsigx52X9A" target="_blank" rel="noopener noreferrer" aria-label="4.5 estrellas en Google — ver reseñas">
+      <svg class="gr-glogo" viewBox="0 0 48 48" width="18" height="18" aria-hidden="true">
+        <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+        <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+        <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
+        <path fill="#EA4335" d="M24 9.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 2.99 29.93 1 24 1 15.4 1 7.96 5.93 4.34 13.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+      </svg>
+      <span class="gr-badge-num">4.5</span>
+      <span class="resena-stars" style="--rating:4.5" aria-hidden="true"></span>
+      <span class="gr-badge-text">en Google</span>
+    </a>
+
+    <span class="tbadge tbadge-warranty" aria-label="Servicio garantizado">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+        <path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4 10-11"/>
+      </svg>
+      <span>Garantizado</span>
+    </span>
+
+  </div>
+
   <div id="zona-reparaciones">
 
-    <section class="hero" id="inicio">
-      <!-- Mini badge de reseñas de Google sobre el banner -->
-      <a class="gr-badge" href="https://maps.app.goo.gl/Th9mKU1Rsigx52X9A" target="_blank" rel="noopener noreferrer" aria-label="4.5 estrellas en Google — ver reseñas">
-        <svg class="gr-glogo" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
-          <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
-          <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
-          <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34A21.99 21.99 0 0 0 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
-          <path fill="#EA4335" d="M24 9.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 2.99 29.93 1 24 1 15.4 1 7.96 5.93 4.34 13.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
-        </svg>
-        <span class="gr-badge-num">4.5</span>
-        <span class="resena-stars" style="--rating:4.5" aria-hidden="true"></span>
-        <span class="gr-badge-text">en Google</span>
-      </a>
-    </section>
+    <section class="hero" id="inicio"></section>
 
     <section class="equipos-section" id="servicios">
       <span class="section-eyebrow">Nuestros servicios</span>

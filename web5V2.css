@@ -980,29 +980,69 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 .gr-badge:hover{ transform: translateX(-50%) translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 
-/* -------------------- ETIQUETA DORADA: EXPERIENCIA (en el header) -------------------- */
-.exp-badge{
+/* -------------------- DISTINTIVOS FIJOS DEBAJO DEL HEADER -------------------- */
+.top-badges{
+  position: fixed;
+  top: calc(var(--header-h) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;                 /* debajo del header (100), encima del contenido */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100vw - 24px);
+  pointer-events: none;        /* el contenedor no bloquea; sí los botones */
+}
+.top-badges > *{ pointer-events: auto; }
+
+.tbadge{
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 7px 14px;
+  padding: 8px 15px;
   border-radius: 999px;
-  background: linear-gradient(135deg, #fde6a8 0%, #e8b53d 45%, #c8901c 100%);
-  color: #4a3500;
   font-family: var(--font-head);
   font-size: .9rem;
+  font-weight: 700;
   line-height: 1;
-  border: 1px solid rgba(255,255,255,.4);
-  box-shadow: 0 2px 8px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.5);
   white-space: nowrap;
+  border: 1px solid rgba(255,255,255,.5);
+  box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.tbadge:hover{ transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+.tbadge svg{ flex: none; }
+
+/* 8 años de experiencia — dorado */
+.tbadge-exp{
+  background: linear-gradient(135deg, #fde6a8 0%, #e8b53d 45%, #c8901c 100%);
+  color: #4a3500;
+  box-shadow: 0 4px 14px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.tbadge-exp svg{ color: #7a5400; }
+.tbadge-exp strong{ font-weight: 800; }
+
+/* Calificación de Google — blanco */
+.tbadge-google{
+  background: rgba(255,255,255,.96);
+  color: var(--text-soft);
+  font-weight: 600;
+  backdrop-filter: blur(2px);
+}
+.tbadge-google .resena-stars{ font-size: .94rem; letter-spacing: 1px; }
+
+/* Garantizado — verde */
+.tbadge-warranty{
+  background: linear-gradient(135deg, #2ec27e 0%, #149a5b 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(20,154,91,.35), inset 0 1px 0 rgba(255,255,255,.3);
 }
 
-.exp-badge-icon{ flex: none; color: #7a5400; }
-.exp-badge-text{ font-weight: 600; }
-.exp-badge-text strong{ font-weight: 800; }
-
 @media (max-width: 480px){
-  .exp-badge{ padding: 6px 12px; font-size: .82rem; gap: 6px; }
+  .top-badges{ top: calc(var(--header-h) + 6px); gap: 7px; }
+  .tbadge{ padding: 6px 12px; font-size: .8rem; gap: 6px; }
 }
 
 .gr-glogo{ flex: none; }
