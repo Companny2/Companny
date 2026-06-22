@@ -425,22 +425,22 @@ ul{ list-style: none; margin: 0; padding: 0; }
 /* Botón "Volver" siempre visible (fijo, independiente) a la izquierda */
 .btn-volver{
   position: fixed;
-  top: calc(var(--header-h) + 12px);
+  top: calc(var(--header-h) + 14px);
   left: 16px;
   z-index: 95;
   white-space: nowrap;
-  background: #ffffff;
-  color: var(--navy);
-  border: 1px solid var(--border);
+  background: var(--navy);
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,.22);
   border-radius: 999px;
   padding: 11px 18px;
   font-size: .95rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 22px rgba(2,36,68,.45);
+  box-shadow: 0 8px 22px rgba(2,36,68,.5);
   transition: opacity .2s ease, transform .2s ease;
 }
-.btn-volver:hover{ transform: translateY(-1px); box-shadow: 0 10px 26px rgba(2,36,68,.5); }
+.btn-volver:hover{ transform: translateY(-1px); box-shadow: 0 10px 26px rgba(2,36,68,.55); }
 
 .casos-reales-wrap{ margin-top: 10px; }
 
@@ -1290,7 +1290,7 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 
 @media (max-width: 768px){
-  :root{ --header-h: 82px; }
+  :root{ --header-h: 122px; }
 
   .header-inner{
     padding: 10px 16px;
