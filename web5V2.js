@@ -230,15 +230,19 @@ window.scrollTo({
     const dotsWrap = carousel.querySelector('#carouselDots');
     const reducirMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Fotos que NO se muestran en el carrusel (numeración original del archivo)
+    const omitir = [1, 3];
+
     // Construir las fotos del carrusel
     const slides = [];
     for (let i = 1; i <= totalFotos; i++) {
+      if (omitir.includes(i)) continue;
       const slide = document.createElement('div');
-      slide.className = 'slide' + (i === 1 ? ' active' : '');
+      slide.className = 'slide' + (slides.length === 0 ? ' active' : '');
       const img = document.createElement('img');
       img.src = 'images/galeria-' + String(i).padStart(2, '0') + '.jpg';
       img.alt = 'Trabajo de reparación realizado en PanaRepara';
-      img.loading = i <= 2 ? 'eager' : 'lazy';
+      img.loading = slides.length < 2 ? 'eager' : 'lazy';
       img.decoding = 'async';
       slide.appendChild(img);
       carousel.insertBefore(slide, carousel.querySelector('.carousel-prev'));
@@ -247,12 +251,13 @@ window.scrollTo({
 
     let actual = 0;
     let timer = null;
+    let pausaTimer = null;
 
     slides.forEach((_, i) => {
       const dot = document.createElement('button');
       dot.type = 'button';
       dot.setAttribute('aria-label', 'Ver foto ' + (i + 1));
-      dot.addEventListener('click', () => { mostrar(i); reiniciar(); });
+      dot.addEventListener('click', () => { mostrar(i); pausarTrasInteraccion(); });
       dotsWrap.appendChild(dot);
     });
     const dots = [...dotsWrap.children];
@@ -265,20 +270,31 @@ window.scrollTo({
 
     function siguiente() { mostrar(actual + 1); }
 
+    function detener() { clearInterval(timer); timer = null; }
+
     function iniciar() {
+      detener();
+      clearTimeout(pausaTimer);
+      pausaTimer = null;
       if (reducirMovimiento) return;
       timer = setInterval(siguiente, 3500);
     }
 
-    function reiniciar() { clearInterval(timer); iniciar(); }
+    // Tras una interacción manual: detener y reanudar el giro 10 s después
+    function pausarTrasInteraccion() {
+      detener();
+      clearTimeout(pausaTimer);
+      pausaTimer = setTimeout(iniciar, 10000);
+    }
 
     mostrar(0);
     iniciar();
 
-    carousel.querySelector('.carousel-next').addEventListener('click', () => { siguiente(); reiniciar(); });
-    carousel.querySelector('.carousel-prev').addEventListener('click', () => { mostrar(actual - 1); reiniciar(); });
+    carousel.querySelector('.carousel-next').addEventListener('click', () => { siguiente(); pausarTrasInteraccion(); });
+    carousel.querySelector('.carousel-prev').addEventListener('click', () => { mostrar(actual - 1); pausarTrasInteraccion(); });
 
-    carousel.addEventListener('mouseenter', () => clearInterval(timer));
-    carousel.addEventListener('mouseleave', iniciar);
+    carousel.addEventListener('mouseenter', detener);
+    // Al salir el cursor solo reanuda si no hay una pausa manual de 10 s en curso
+    carousel.addEventListener('mouseleave', () => { if (!pausaTimer) iniciar(); });
   }
 });

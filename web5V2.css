@@ -12,7 +12,7 @@
   --wa:          #25d366;
   --wa-dark:     #16b84e;
   --bg:          #f4f6f8;
-  --surface:     #ffffff;
+  --surface:     #eef4f6;  /* blanco con un toque sutil del teal de marca (suaviza el contraste) */
   --text:        #103845;  /* texto oscuro con matiz teal */
   --text-soft:   #355c69;
   --border:      #e3e8ee;
@@ -397,13 +397,26 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .panel-default,
 .panel-detalle{ transition: opacity .25s ease; }
 
+/* Rótulo pequeño sobre el título del panel */
+.panel-kicker{
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--navy-2);
+  margin: 0 0 8px;
+}
+
 .panel-default h2,
 .panel-detalle h2{
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  line-height: 1.25;
+  letter-spacing: -.4px;
   text-align: center;
   color: var(--navy);
   margin: 0 0 20px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .panel-default p,
@@ -964,6 +977,35 @@ ul{ list-style: none; margin: 0; padding: 0; }
   white-space: nowrap;
 }
 .gr-badge:hover{ transform: translateX(-50%) translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+
+/* -------------------- ETIQUETA DORADA: EXPERIENCIA -------------------- */
+.exp-badge{
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fde6a8 0%, #e8b53d 45%, #c8901c 100%);
+  color: #4a3500;
+  font-family: var(--font-head);
+  font-size: .95rem;
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: 0 4px 14px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5);
+  white-space: nowrap;
+}
+
+.exp-badge-icon{ flex: none; color: #7a5400; }
+.exp-badge-text{ font-weight: 600; }
+.exp-badge-text strong{ font-weight: 800; }
+
+@media (max-width: 480px){
+  .exp-badge{ top: 12px; padding: 7px 13px; font-size: .88rem; gap: 6px; }
+}
 
 .gr-glogo{ flex: none; }
 
