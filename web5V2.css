@@ -329,8 +329,8 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 
 .equipo-card{
-  background: #cee1e7;            /* tinte teal +8% */
-  border: 1px solid #c1d6dd;
+  background: #d0e3e8;            /* tinte teal (+8% y luego -5%) */
+  border: 1px solid #c4d8df;
   border-radius: 24px;
   padding: 22px 18px 18px;
   text-align: center;
@@ -388,8 +388,8 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .panel-servicio{
   max-width: var(--maxw);
   margin: 38px auto 0;
-  background: #cee1e7;            /* tinte teal +8% */
-  border: 1px solid #c1d6dd;
+  background: #d0e3e8;            /* tinte teal (+8% y luego -5%) */
+  border: 1px solid #c4d8df;
   border-radius: var(--radius-lg);
   padding: 42px 36px;
   box-shadow: var(--shadow-sm);
