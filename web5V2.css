@@ -1050,8 +1050,18 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 
 @media (max-width: 480px){
-  .top-badges{ top: calc(var(--header-h) + 6px); gap: 7px; }
-  .tbadge{ padding: 6px 12px; font-size: .8rem; gap: 6px; }
+  .top-badges{
+    top: calc(var(--header-h) + 6px);
+    gap: 6px;
+    flex-wrap: nowrap;                 /* todos en una sola fila horizontal */
+    max-width: calc(100vw - 10px);
+  }
+  .tbadge{ padding: 5px 9px; font-size: .72rem; gap: 5px; }
+  .tbadge svg{ width: 13px; height: 13px; }
+  .tbadge-google .gr-badge-num{ font-size: .9rem; }
+  /* En celular se acorta lo accesorio para que quepan en una línea */
+  .tbadge-exp .tb-mini-hide{ display: none; }     /* "de experiencia" */
+  .tbadge-google .resena-stars{ display: none; }  /* estrellas */
 }
 
 .gr-glogo{ flex: none; }
