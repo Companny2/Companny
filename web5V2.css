@@ -444,6 +444,45 @@ ul{ list-style: none; margin: 0; padding: 0; }
 
 .casos-reales-wrap{ margin-top: 10px; }
 
+/* Pestaña desplegable de casos frecuentes */
+.casos-master{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .2s ease, border-color .2s ease;
+}
+.casos-master[open]{
+  border-color: rgba(41,113,137,.45);
+  box-shadow: var(--shadow);
+}
+.casos-master > summary{
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--navy);
+  padding: 18px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.casos-master > summary::-webkit-details-marker{ display: none; }
+.casos-master > summary::after{
+  content: "+";
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: var(--teal);
+  line-height: 1;
+  transition: transform .2s ease;
+}
+.casos-master[open] > summary::after{ transform: rotate(45deg); }
+
+.casos-master .casos-hint{ padding: 0 20px; }
+.casos-master .casos-reales{ padding: 0 20px 4px; margin-bottom: 20px; }
+
 .casos-hint{
   margin: 0 0 16px;
   color: var(--text-soft);
