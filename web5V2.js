@@ -231,7 +231,7 @@ window.scrollTo({
     const reducirMovimiento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // Fotos que NO se muestran en el carrusel (numeración original del archivo)
-    const omitir = [1, 3];
+    const omitir = [1, 2, 3];
 
     // Construir las fotos del carrusel
     const slides = [];

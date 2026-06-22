@@ -978,24 +978,20 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 .gr-badge:hover{ transform: translateX(-50%) translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 
-/* -------------------- ETIQUETA DORADA: EXPERIENCIA -------------------- */
+/* -------------------- ETIQUETA DORADA: EXPERIENCIA (en el header) -------------------- */
 .exp-badge{
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 7px;
+  padding: 7px 14px;
   border-radius: 999px;
   background: linear-gradient(135deg, #fde6a8 0%, #e8b53d 45%, #c8901c 100%);
   color: #4a3500;
   font-family: var(--font-head);
-  font-size: .95rem;
-  border: 1px solid rgba(255,255,255,.55);
-  box-shadow: 0 4px 14px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.5);
+  font-size: .9rem;
+  line-height: 1;
+  border: 1px solid rgba(255,255,255,.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.5);
   white-space: nowrap;
 }
 
@@ -1004,7 +1000,7 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .exp-badge-text strong{ font-weight: 800; }
 
 @media (max-width: 480px){
-  .exp-badge{ top: 12px; padding: 7px 13px; font-size: .88rem; gap: 6px; }
+  .exp-badge{ padding: 6px 12px; font-size: .82rem; gap: 6px; }
 }
 
 .gr-glogo{ flex: none; }
