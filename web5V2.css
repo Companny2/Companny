@@ -994,8 +994,17 @@ ul{ list-style: none; margin: 0; padding: 0; }
   gap: 10px;
   max-width: calc(100vw - 24px);
   pointer-events: none;        /* el contenedor no bloquea; sí los botones */
+  transition: opacity .25s ease, transform .25s ease, visibility .25s ease;
 }
 .top-badges > *{ pointer-events: auto; }
+
+/* Solo visibles arriba: al bajar se desvanecen */
+.top-badges.oculto{
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-14px);
+  pointer-events: none;
+}
 
 .tbadge{
   display: inline-flex;

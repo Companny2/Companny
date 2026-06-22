@@ -297,4 +297,19 @@ window.scrollTo({
     // Al salir el cursor solo reanuda si no hay una pausa manual de 10 s en curso
     carousel.addEventListener('mouseleave', () => { if (!pausaTimer) iniciar(); });
   }
+
+  /* -------------------- DISTINTIVOS: solo visibles arriba -------------------- */
+  const topBadges = document.querySelector('.top-badges');
+  if (topBadges) {
+    const UMBRAL = 80; // px de scroll a partir de los cuales se ocultan
+    let ticking = false;
+    const actualizar = () => {
+      topBadges.classList.toggle('oculto', window.scrollY > UMBRAL);
+      ticking = false;
+    };
+    window.addEventListener('scroll', () => {
+      if (!ticking) { ticking = true; requestAnimationFrame(actualizar); }
+    }, { passive: true });
+    actualizar(); // estado inicial
+  }
 });
