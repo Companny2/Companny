@@ -416,28 +416,29 @@ ul{ list-style: none; margin: 0; padding: 0; }
   margin: 0 auto 16px;
 }
 
-.panel-detalle{ text-align: left; padding-top: 8px; }
+.panel-detalle{ text-align: left; padding-top: 64px; }
 .panel-detalle h2,
 .panel-detalle > p{ text-align: center; }
 
 .hidden{ display: none; }
 
+/* Botón "Volver" siempre visible (fijo) mientras se ve el detalle */
 .btn-volver{
-  position: sticky;
+  position: fixed;
   top: calc(var(--header-h) + 10px);
-  z-index: 90;
-  align-self: flex-start;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 95;
   background: var(--navy);
   color: #ffffff;
-  border: none;
+  border: 1px solid rgba(255,255,255,.18);
   border-radius: 999px;
-  padding: 12px 20px;
+  padding: 12px 22px;
   font-size: .98rem;
   font-weight: 700;
   cursor: pointer;
-  margin-bottom: 34px;
-  box-shadow: 0 6px 18px rgba(2,36,68,.30);
-  transition: opacity .2s ease, transform .2s ease;
+  box-shadow: 0 8px 22px rgba(2,36,68,.40);
+  transition: opacity .2s ease;
 }
 .btn-volver:hover{ opacity: .92; }
 
