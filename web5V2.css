@@ -1300,7 +1300,7 @@ ul{ list-style: none; margin: 0; padding: 0; }
 /* Reseña destacada (una visible) + desplegable para el resto */
 .resena-grid-uno{ max-width: 580px; margin: 0 auto; }
 
-.resenas-mas{ max-width: 1100px; margin: 14px auto 0; text-align: center; }
+.resenas-mas{ max-width: 1100px; margin: 8px auto 0; text-align: center; }
 .resenas-mas > summary{
   list-style: none;
   cursor: pointer;
@@ -1374,6 +1374,9 @@ ul{ list-style: none; margin: 0; padding: 0; }
 @media (max-width: 600px){
   .resenas-grid{ grid-template-columns: 1fr; }
   .resena-resumen{ justify-content: center; text-align: center; }
+  .resenas-mas{ margin-top: 6px; }
+  .resenas-mas > summary{ padding: 8px 16px; font-size: .82rem; gap: 7px; }
+  .resenas-mas > summary::after{ width: 7px; height: 7px; }
 }
 
 /* -------------------- FAQ -------------------- */
