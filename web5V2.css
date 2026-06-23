@@ -95,29 +95,28 @@ ul{ list-style: none; margin: 0; padding: 0; }
   display: inline-flex;
   align-items: center;
   position: relative;
-  overflow: hidden;          /* recorta el barrido de brillo del logo */
-  border-radius: 8px;
 }
 
-/* Barrido de brillo dinámico que cruza el logo (mismo efecto que el botón volver) */
+/* Barrido de brillo confinado a la forma del logo (letras y círculo) vía máscara */
 .header-left::before{
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 45%;
-  height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,.65), transparent);
-  transform: skewX(-20deg) translateX(-220%);
-  animation: logo-sheen 4.2s ease-in-out infinite;
+  inset: 0;
   pointer-events: none;
   z-index: 2;
+  background: linear-gradient(100deg, transparent 38%, rgba(255,255,255,.9) 50%, transparent 62%);
+  background-repeat: no-repeat;
+  background-size: 250% 100%;
+  background-position: 150% 0;
+  -webkit-mask: url("images/logo-panarepara.png") left center / contain no-repeat;
+          mask: url("images/logo-panarepara.png") left center / contain no-repeat;
+  animation: logo-sheen 4.2s ease-in-out infinite;
 }
 
 @keyframes logo-sheen{
-  0%   { transform: skewX(-20deg) translateX(-220%); }
-  35%  { transform: skewX(-20deg) translateX(420%); }
-  100% { transform: skewX(-20deg) translateX(420%); }
+  0%   { background-position: 150% 0; }
+  35%  { background-position: -50% 0; }
+  100% { background-position: -50% 0; }
 }
 
 .logo-img{
@@ -1232,8 +1231,8 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .resena-resumen{
   max-width: 720px;
   margin: 0 auto 28px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #d0e3e8;            /* mismo tinte teal del resto de tarjetas */
+  border: 1px solid #c4d8df;
   border-radius: 22px;
   box-shadow: var(--shadow);
   padding: 26px 28px;
@@ -1298,9 +1297,43 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 .resenas-grid:empty{ display: none; }
 
+/* Reseña destacada (una visible) + desplegable para el resto */
+.resena-grid-uno{ max-width: 580px; margin: 0 auto; }
+
+.resenas-mas{ max-width: 1100px; margin: 14px auto 0; text-align: center; }
+.resenas-mas > summary{
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 22px;
+  border-radius: 999px;
+  background: var(--navy);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: .95rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s ease, opacity .2s ease;
+}
+.resenas-mas > summary::-webkit-details-marker{ display: none; }
+.resenas-mas > summary:hover{ transform: translateY(-1px); opacity: .95; }
+.resenas-mas > summary::after{
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-right: 2.4px solid currentColor;
+  border-bottom: 2.4px solid currentColor;
+  transform: rotate(45deg);
+  margin-top: -3px;
+  transition: transform .25s ease;
+}
+.resenas-mas[open] > summary{ margin-bottom: 20px; }
+.resenas-mas[open] > summary::after{ transform: rotate(-135deg); margin-top: 3px; }
+
 .resena-card{
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #d0e3e8;            /* mismo tinte teal del resto de tarjetas */
+  border: 1px solid #c4d8df;
   border-radius: 18px;
   box-shadow: var(--shadow-sm);
   padding: 24px;
