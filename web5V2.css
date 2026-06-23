@@ -780,6 +780,47 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .beneficio-card strong{ color: #ffffff; }
 
 /* -------------------- CONTACTO -------------------- */
+/* -------------------- BANDA DE MARCAS (marquee) -------------------- */
+.marcas{
+  padding: 44px 0 8px;
+}
+.marcas .section-eyebrow{ margin-bottom: 22px; }
+
+.marcas-viewport{
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.marcas-track{
+  display: flex;
+  width: max-content;
+  align-items: center;
+  animation: marcas-scroll 34s linear infinite;
+}
+.marcas-viewport:hover .marcas-track{ animation-play-state: paused; }
+
+.marca-item{
+  flex: none;
+  padding: 0 42px;
+  font-family: var(--font-head);
+  font-weight: 800;
+  font-size: 1.7rem;
+  letter-spacing: .5px;
+  white-space: nowrap;
+  color: rgba(255,255,255,.62);
+}
+
+@keyframes marcas-scroll{
+  from{ transform: translateX(0); }
+  to{ transform: translateX(-50%); }
+}
+
+@media (max-width: 600px){
+  .marca-item{ font-size: 1.25rem; padding: 0 28px; }
+}
+
 /* -------------------- CÓMO LLEGAR (video) -------------------- */
 .como-llegar{
   padding: 64px 20px 24px;
@@ -1434,6 +1475,7 @@ ul{ list-style: none; margin: 0; padding: 0; }
   .fab-wa{ animation: none; }
   .btn-volver{ animation: none; }
   .btn-volver::before{ animation: none; display: none; }
+  .marcas-track{ animation: none; }
   .hero::after{ animation: none; display: none; }
   .equipos-section::before,
   .equipos-section::after{ animation: none; }
