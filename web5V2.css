@@ -107,14 +107,14 @@ ul{ list-style: none; margin: 0; padding: 0; }
   inset: 0;
   pointer-events: none;
   z-index: 2;
-  background: linear-gradient(105deg, transparent 36%, rgba(148,162,178,.92) 50%, transparent 64%);
+  background: linear-gradient(105deg, transparent 40%, rgba(110,126,142,1) 50%, transparent 60%);
   background-repeat: no-repeat;
   background-size: 240% 100%;
   background-position: 150% 0;
   mix-blend-mode: multiply;
   -webkit-mask: url("images/logo-panarepara.png") left center / contain no-repeat;
           mask: url("images/logo-panarepara.png") left center / contain no-repeat;
-  animation: logo-sheen 8s ease-in-out infinite;
+  animation: logo-sheen 7.2s ease-in-out infinite;
 }
 
 @keyframes logo-sheen{
