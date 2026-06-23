@@ -94,6 +94,30 @@ ul{ list-style: none; margin: 0; padding: 0; }
 .header-left{
   display: inline-flex;
   align-items: center;
+  position: relative;
+  overflow: hidden;          /* recorta el barrido de brillo del logo */
+  border-radius: 8px;
+}
+
+/* Barrido de brillo dinámico que cruza el logo (mismo efecto que el botón volver) */
+.header-left::before{
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.65), transparent);
+  transform: skewX(-20deg) translateX(-220%);
+  animation: logo-sheen 4.2s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes logo-sheen{
+  0%   { transform: skewX(-20deg) translateX(-220%); }
+  35%  { transform: skewX(-20deg) translateX(420%); }
+  100% { transform: skewX(-20deg) translateX(420%); }
 }
 
 .logo-img{
@@ -1475,6 +1499,7 @@ ul{ list-style: none; margin: 0; padding: 0; }
   .fab-wa{ animation: none; }
   .btn-volver{ animation: none; }
   .btn-volver::before{ animation: none; display: none; }
+  .header-left::before{ animation: none; display: none; }
   .marcas-track{ animation: none; }
   .hero::after{ animation: none; display: none; }
   .equipos-section::before,
