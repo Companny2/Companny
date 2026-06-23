@@ -97,20 +97,23 @@ ul{ list-style: none; margin: 0; padding: 0; }
   position: relative;
 }
 
-/* Barrido de brillo confinado a la forma del logo (letras y círculo) vía máscara */
+/* Barrido de brillo confinado a la forma del logo (letras y círculo) vía máscara.
+   El logo es blanco; un destello blanco no se vería, así que el barrido es de
+   luz cian (acento de marca) mezclado con multiply para que tiña las letras al pasar. */
 .header-left::before{
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 2;
-  background: linear-gradient(100deg, transparent 38%, rgba(255,255,255,.9) 50%, transparent 62%);
+  background: linear-gradient(105deg, transparent 40%, rgba(86,214,255,.95) 50%, transparent 60%);
   background-repeat: no-repeat;
-  background-size: 250% 100%;
+  background-size: 240% 100%;
   background-position: 150% 0;
+  mix-blend-mode: multiply;
   -webkit-mask: url("images/logo-panarepara.png") left center / contain no-repeat;
           mask: url("images/logo-panarepara.png") left center / contain no-repeat;
-  animation: logo-sheen 4.2s ease-in-out infinite;
+  animation: logo-sheen 3.6s ease-in-out infinite;
 }
 
 @keyframes logo-sheen{
