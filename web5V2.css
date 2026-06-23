@@ -99,26 +99,27 @@ ul{ list-style: none; margin: 0; padding: 0; }
 
 /* Barrido de brillo confinado a la forma del logo (letras y círculo) vía máscara.
    El logo es blanco; un destello blanco no se vería, así que el barrido es de
-   luz cian (acento de marca) mezclado con multiply para que tiña las letras al pasar. */
+   tono plateado mezclado con multiply para que matice las letras al pasar.
+   Lento (~8s) para que el destello se aprecie bien. */
 .header-left::before{
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 2;
-  background: linear-gradient(105deg, transparent 40%, rgba(86,214,255,.95) 50%, transparent 60%);
+  background: linear-gradient(105deg, transparent 36%, rgba(148,162,178,.92) 50%, transparent 64%);
   background-repeat: no-repeat;
   background-size: 240% 100%;
   background-position: 150% 0;
   mix-blend-mode: multiply;
   -webkit-mask: url("images/logo-panarepara.png") left center / contain no-repeat;
           mask: url("images/logo-panarepara.png") left center / contain no-repeat;
-  animation: logo-sheen 3.6s ease-in-out infinite;
+  animation: logo-sheen 8s ease-in-out infinite;
 }
 
 @keyframes logo-sheen{
   0%   { background-position: 150% 0; }
-  35%  { background-position: -50% 0; }
+  50%  { background-position: -50% 0; }
   100% { background-position: -50% 0; }
 }
 
@@ -1300,17 +1301,18 @@ ul{ list-style: none; margin: 0; padding: 0; }
 }
 .resenas-grid:empty{ display: none; }
 
-/* Reseña destacada (una visible) + desplegable para el resto.
-   Forzamos una sola columna centrada para que no quede angosta ni desalineada. */
-.resenas-grid.resena-grid-uno{ grid-template-columns: 1fr; max-width: 720px; margin: 0 auto; }
+/* Reseñas: en escritorio se ven TODAS; en celular se muestra solo la primera
+   y un botón "Ver más reseñas" despliega el resto (toggle 100% CSS con checkbox). */
+.resenas-check{ position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 
-.resenas-mas{ max-width: 1100px; margin: 8px auto 0; text-align: center; }
-.resenas-mas > summary{
-  list-style: none;
+/* Botón de desplegar: oculto en escritorio (no hace falta, se ven todas) */
+.resenas-mas-btn{
+  display: none;
   cursor: pointer;
-  display: inline-flex;
   align-items: center;
   gap: 9px;
+  width: fit-content;
+  margin: 14px auto 0;
   padding: 11px 22px;
   border-radius: 999px;
   background: var(--navy);
@@ -1320,9 +1322,8 @@ ul{ list-style: none; margin: 0; padding: 0; }
   box-shadow: var(--shadow-sm);
   transition: transform .2s ease, opacity .2s ease;
 }
-.resenas-mas > summary::-webkit-details-marker{ display: none; }
-.resenas-mas > summary:hover{ transform: translateY(-1px); opacity: .95; }
-.resenas-mas > summary::after{
+.resenas-mas-btn:hover{ transform: translateY(-1px); opacity: .95; }
+.resenas-mas-btn::after{
   content: "";
   width: 8px;
   height: 8px;
@@ -1332,8 +1333,10 @@ ul{ list-style: none; margin: 0; padding: 0; }
   margin-top: -3px;
   transition: transform .25s ease;
 }
-.resenas-mas[open] > summary{ margin-bottom: 20px; }
-.resenas-mas[open] > summary::after{ transform: rotate(-135deg); margin-top: 3px; }
+.resenas-check:checked ~ .resenas-mas-btn::after{ transform: rotate(-135deg); margin-top: 3px; }
+.rmb-menos{ display: none; }
+.resenas-check:checked ~ .resenas-mas-btn .rmb-mas{ display: none; }
+.resenas-check:checked ~ .resenas-mas-btn .rmb-menos{ display: inline; }
 
 .resena-card{
   background: #d0e3e8;            /* mismo tinte teal del resto de tarjetas */
@@ -1379,14 +1382,18 @@ ul{ list-style: none; margin: 0; padding: 0; }
   .resenas-grid{ grid-template-columns: 1fr; }
   /* Unificados: mismo ancho, centrados y un poco más pequeños */
   .resena-resumen,
-  .resenas-grid.resena-grid-uno{ max-width: 440px; }
+  .resenas-todas{ max-width: 440px; }
   .resena-resumen{ justify-content: center; text-align: center; padding: 18px 18px; gap: 12px; }
   .resena-num{ font-size: 2.4rem; }
   .resena-btn{ padding: 10px 18px; font-size: .88rem; }
   .resena-card{ padding: 18px; }
-  .resenas-mas{ margin-top: 6px; }
-  .resenas-mas > summary{ padding: 8px 16px; font-size: .82rem; gap: 7px; }
-  .resenas-mas > summary::after{ width: 7px; height: 7px; }
+
+  /* mostrar solo la primera reseña; el resto tras "Ver más reseñas" */
+  .resenas-todas .resena-card:nth-of-type(n+2){ display: none; }
+  .resenas-check:checked ~ .resenas-todas .resena-card{ display: block; }
+
+  .resenas-mas-btn{ display: inline-flex; margin-top: 8px; padding: 8px 16px; font-size: .82rem; gap: 7px; }
+  .resenas-mas-btn::after{ width: 7px; height: 7px; }
 }
 
 /* -------------------- FAQ -------------------- */
