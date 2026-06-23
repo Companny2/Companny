@@ -114,13 +114,13 @@ ul{ list-style: none; margin: 0; padding: 0; }
   mix-blend-mode: multiply;
   -webkit-mask: url("images/logo-panarepara.png") left center / contain no-repeat;
           mask: url("images/logo-panarepara.png") left center / contain no-repeat;
-  animation: logo-sheen 7.2s ease-in-out infinite;
+  animation: logo-sheen 5s ease-in-out infinite;
 }
 
 @keyframes logo-sheen{
   0%   { background-position: 150% 0; }
-  50%  { background-position: -50% 0; }
-  100% { background-position: -50% 0; }
+  72%  { background-position: -50% 0; }   /* barrido (~3.6s, misma velocidad) */
+  100% { background-position: -50% 0; }   /* pausa corta antes de repetir (~1.4s) */
 }
 
 .logo-img{
