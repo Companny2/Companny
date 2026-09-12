@@ -521,6 +521,7 @@
       <span class="pr-iot__item" id="pr-iot-t"><span class="pr-iot__ic">🌡️</span><b>--</b><i>°C</i></span>
       <span class="pr-iot__item" id="pr-iot-h"><span class="pr-iot__ic">💧</span><b>--</b><i>%</i></span>
     </div>
+    <div class="pr-iot__alarm" id="pr-iot-alarm" hidden></div>
     <div class="pr-iot__foot" id="pr-iot-when">conectando…</div>
   </div>
   <button id="pr-iot-show" class="pr-iot__show" type="button" hidden aria-label="Mostrar ambiente">🌡️</button>
@@ -543,6 +544,11 @@
     .pr-iot__item i{font-style:normal;font-size:12px;color:#9fd6ea}
     .pr-iot__ic{font-size:15px}
     .pr-iot__item.alarma b{color:#ff8a4c}
+    .pr-iot__alarm{margin-top:9px;display:flex;flex-direction:column;gap:4px}
+    .pr-iot__alarm span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+      color:#ffd7c2;background:rgba(255,138,76,.16);border:1px solid rgba(255,138,76,.45);
+      border-radius:9px;padding:3px 8px;animation:prblink 1.2s ease-in-out infinite}
+    @keyframes prblink{0%,100%{opacity:1}50%{opacity:.55}}
     .pr-iot__foot{margin-top:8px;font-size:11px;color:#7f9bb3}
     .pr-iot.hide{transform:translateY(140%);opacity:0;pointer-events:none}
     .pr-iot__show{position:fixed;left:16px;bottom:16px;z-index:9998;width:46px;height:46px;border-radius:50%;
@@ -558,6 +564,7 @@
     var box=document.getElementById('pr-iot');
     var elT=document.getElementById('pr-iot-t'),elH=document.getElementById('pr-iot-h');
     var when=document.getElementById('pr-iot-when');
+    var alarmBox=document.getElementById('pr-iot-alarm');
     var btnMin=box.querySelector('.pr-iot__min'),btnShow=document.getElementById('pr-iot-show');
     var lastTs=null;
     function setHidden(h){box.classList.toggle('hide',h);btnShow.hidden=!h;try{localStorage.setItem('pr-iot-hidden',h?'1':'0')}catch(e){}}
@@ -567,6 +574,10 @@
       elT.querySelector('b').textContent=(isNaN(t)?'--':t.toFixed(1));
       elH.querySelector('b').textContent=(isNaN(h)?'--':Math.round(h));
       elT.classList.toggle('alarma',!!at);elH.classList.toggle('alarma',!!ah);
+      var avisos='';
+      if(at)avisos+='<span>⚠️ Temperatura alta</span>';
+      if(ah)avisos+='<span>⚠️ Humedad fuera de rango</span>';
+      alarmBox.innerHTML=avisos;alarmBox.hidden=!avisos;
       lastTs=fecha?new Date(fecha):new Date();tick();
     }
     function tick(){if(!lastTs){when.textContent='sin datos';return;}
