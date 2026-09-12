@@ -513,6 +513,79 @@
     </svg>
   </a>
 
+  <!-- ===== Widget IoT: temperatura/humedad del taller (ThingSpeak) ===== -->
+  <div id="pr-iot" class="pr-iot">
+    <button class="pr-iot__min" type="button" aria-label="Ocultar">–</button>
+    <div class="pr-iot__title"><span class="pr-iot__dot"></span>Ambiente del taller</div>
+    <div class="pr-iot__row">
+      <span class="pr-iot__item" id="pr-iot-t"><span class="pr-iot__ic">🌡️</span><b>--</b><i>°C</i></span>
+      <span class="pr-iot__item" id="pr-iot-h"><span class="pr-iot__ic">💧</span><b>--</b><i>%</i></span>
+    </div>
+    <div class="pr-iot__foot" id="pr-iot-when">conectando…</div>
+  </div>
+  <button id="pr-iot-show" class="pr-iot__show" type="button" hidden aria-label="Mostrar ambiente">🌡️</button>
+  <style>
+    .pr-iot{position:fixed;left:16px;bottom:16px;z-index:9998;
+      background:rgba(2,36,68,.92);backdrop-filter:blur(6px);
+      color:#eaf4ff;border:1px solid rgba(127,227,255,.35);border-radius:16px;
+      padding:12px 14px 10px;box-shadow:0 10px 30px rgba(0,0,0,.35);
+      font-family:'Segoe UI',system-ui,sans-serif;min-width:186px;
+      transition:transform .25s ease,opacity .25s ease}
+    .pr-iot__min{position:absolute;top:6px;right:8px;width:22px;height:22px;line-height:20px;
+      border:none;border-radius:8px;background:rgba(127,227,255,.15);color:#7fe3ff;font-size:16px;cursor:pointer}
+    .pr-iot__min:hover{background:rgba(127,227,255,.3)}
+    .pr-iot__title{font-size:12px;letter-spacing:.3px;color:#9fd6ea;display:flex;align-items:center;gap:7px;margin-bottom:8px}
+    .pr-iot__dot{width:8px;height:8px;border-radius:50%;background:#34d399;animation:prpulse 2s infinite}
+    @keyframes prpulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+    .pr-iot__row{display:flex;gap:16px}
+    .pr-iot__item{display:flex;align-items:baseline;gap:5px;font-size:15px}
+    .pr-iot__item b{font-size:22px;font-weight:700;color:#fff}
+    .pr-iot__item i{font-style:normal;font-size:12px;color:#9fd6ea}
+    .pr-iot__ic{font-size:15px}
+    .pr-iot__item.alarma b{color:#ff8a4c}
+    .pr-iot__foot{margin-top:8px;font-size:11px;color:#7f9bb3}
+    .pr-iot.hide{transform:translateY(140%);opacity:0;pointer-events:none}
+    .pr-iot__show{position:fixed;left:16px;bottom:16px;z-index:9998;width:46px;height:46px;border-radius:50%;
+      border:1px solid rgba(127,227,255,.35);background:rgba(2,36,68,.92);color:#fff;font-size:20px;cursor:pointer;
+      box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    @media(max-width:520px){.pr-iot{min-width:0;padding:10px 12px 8px}.pr-iot__item b{font-size:19px}}
+  </style>
+  <script>
+  (function(){
+    var CHANNEL="3491417";               // Channel ID de ThingSpeak
+    var READKEY="KN3Z8LCHGHBUYSJP";      // Read API Key (solo lectura)
+    var CADA_MS=60000;                    // refresco cada 60 s
+    var box=document.getElementById('pr-iot');
+    var elT=document.getElementById('pr-iot-t'),elH=document.getElementById('pr-iot-h');
+    var when=document.getElementById('pr-iot-when');
+    var btnMin=box.querySelector('.pr-iot__min'),btnShow=document.getElementById('pr-iot-show');
+    var lastTs=null;
+    function setHidden(h){box.classList.toggle('hide',h);btnShow.hidden=!h;try{localStorage.setItem('pr-iot-hidden',h?'1':'0')}catch(e){}}
+    btnMin.onclick=function(){setHidden(true)};btnShow.onclick=function(){setHidden(false)};
+    try{if(localStorage.getItem('pr-iot-hidden')==='1')setHidden(true)}catch(e){}
+    function pinta(t,h,at,ah,fecha){
+      elT.querySelector('b').textContent=(isNaN(t)?'--':t.toFixed(1));
+      elH.querySelector('b').textContent=(isNaN(h)?'--':Math.round(h));
+      elT.classList.toggle('alarma',!!at);elH.classList.toggle('alarma',!!ah);
+      lastTs=fecha?new Date(fecha):new Date();tick();
+    }
+    function tick(){if(!lastTs){when.textContent='sin datos';return;}
+      var s=Math.round((Date.now()-lastTs.getTime())/1000);
+      when.textContent=s<60?('actualizado hace '+s+' s'):('actualizado hace '+Math.round(s/60)+' min');}
+    setInterval(tick,1000);
+    function carga(){
+      var base="https://api.thingspeak.com/channels/"+CHANNEL+"/feeds/last.json";
+      var url=READKEY?base+"?api_key="+READKEY:base;
+      fetch(url).then(function(r){return r.json()}).then(function(d){
+        if(!d||d==='-1'||!d.created_at){when.textContent='sin datos aún';return;}
+        pinta(parseFloat(d.field1),parseFloat(d.field2),d.field3==='1',d.field4==='1',d.created_at);
+      }).catch(function(){when.textContent='sin conexión';});
+    }
+    carga();setInterval(carga,CADA_MS);
+  })();
+  </script>
+  <!-- ===== Fin widget IoT ===== -->
+
   <script src="web5V2.js?v=15"></script>
 </body>
 </html>
