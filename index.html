@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" />
 
-  <link rel="stylesheet" href="web5V2.css?v=54" />
+  <link rel="stylesheet" href="web5V2.css?v=56" />
 
   <script type="application/ld+json">
   {
@@ -178,6 +178,7 @@
 
     <nav class="nav">
         <a href="#servicios">Servicios</a>
+        <a href="#tienda">Tienda</a>
         <a href="#contacto">Contacto</a>
         <a href="https://wa.me/50760322222" class="nav-cta" target="_blank" rel="noopener noreferrer">WhatsApp</a>
     </nav>
@@ -328,6 +329,27 @@
           <p class="casos-hint">¿Tu falla es una de estas? Toca un caso y se carga en tu mensaje; solo presiona enviar.</p>
           <div class="casos-reales" id="casosReales"></div>
         </details>
+      </div>
+    </section>
+
+    <section class="tienda" id="tienda">
+      <span class="section-eyebrow">Nuestra tienda</span>
+      <h2>Productos a la venta</h2>
+      <p class="tienda-intro">
+        Toners, tintas, accesorios, repuestos, cables y más. ¿Te interesa algo?
+        Toca <strong>Comprar</strong> y te llega por WhatsApp listo para enviar.
+      </p>
+
+      <div class="tienda-controles">
+        <input type="search" id="tiendaBuscar" class="tienda-buscar"
+               placeholder="Buscar producto… (ej: toner HP, cable HDMI)" aria-label="Buscar producto">
+        <div class="tienda-cats" id="tiendaCats"></div>
+      </div>
+
+      <div class="tienda-grid" id="tiendaGrid" aria-live="polite"></div>
+      <p class="tienda-vacio" id="tiendaVacio" hidden>No encontramos productos con ese término. Escríbenos por WhatsApp y te ayudamos.</p>
+      <div class="tienda-mas-wrap">
+        <button type="button" id="tiendaMas" class="tienda-mas" hidden>Ver más productos</button>
       </div>
     </section>
 
@@ -526,5 +548,6 @@
   </a>
 
   <script src="web5V2.js?v=15"></script>
+  <script src="tienda.js?v=1"></script>
 </body>
 </html>
