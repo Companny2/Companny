@@ -127,13 +127,14 @@
       'Precio: B/.' + precio + '\n' +
       '¿Está disponible?'
     );
+    const page = p.img.replace('images/tienda/', 'producto/').replace(/\.jpg$/i, '.html');
     const el = document.createElement('article');
     el.className = 'tienda-card';
     el.innerHTML =
-      '<div class="tienda-img"><img src="' + p.img + '" alt="' + esc(p.nombre) + '" loading="lazy" decoding="async"></div>' +
+      '<a class="tienda-img" href="' + page + '" aria-label="Ver ' + esc(p.nombre) + '"><img src="' + p.img + '" alt="' + esc(p.nombre) + '" loading="lazy" decoding="async"></a>' +
       '<div class="tienda-info">' +
         '<span class="tienda-cat">' + esc(p.cat) + '</span>' +
-        '<h3 class="tienda-nombre">' + esc(p.nombre) + '</h3>' +
+        '<h3 class="tienda-nombre"><a href="' + page + '">' + esc(p.nombre) + '</a></h3>' +
         '<div class="tienda-precio">B/. ' + precio + '</div>' +
         '<a class="tienda-comprar" href="https://wa.me/' + WA + '?text=' + msg + '" target="_blank" rel="noopener noreferrer">Comprar por WhatsApp</a>' +
       '</div>';
