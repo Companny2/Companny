@@ -1,21 +1,24 @@
-/* Tienda PanaRepara — carga productos.json, filtra/busca y arma el mensaje de compra por WhatsApp */
+/* Tienda PanaRepara — catálogo con búsqueda, filtros y paginación
+   (escritorio: 8 por página = 4x2 · móvil: 6 por página = 2x3) */
 (function () {
-  const GRID = document.getElementById('tiendaGrid');
+  const GRID   = document.getElementById('tiendaGrid');
   if (!GRID) return;
-
   const BUSCAR = document.getElementById('tiendaBuscar');
   const CATS   = document.getElementById('tiendaCats');
-  const MAS    = document.getElementById('tiendaMas');
+  const PAG    = document.getElementById('tiendaPag');
   const VACIO  = document.getElementById('tiendaVacio');
+  const SEC    = document.getElementById('tienda');
   const WA     = '50760322222';
-  const LOTE   = 24;
+  const mqMovil = window.matchMedia('(max-width: 768px)');
 
-  let todos = [], filtrados = [], mostrados = 0, cat = 'Todas', q = '';
+  let todos = [], filtrados = [], pagina = 1, cat = 'Todas', q = '';
 
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const porPagina = () => mqMovil.matches ? 6 : 8;
+  const totalPaginas = () => Math.max(1, Math.ceil(filtrados.length / porPagina()));
 
-  fetch('productos.json?v=1')
+  fetch('productos.json?v=2')
     .then(r => r.json())
     .then(data => { todos = data; construirCats(); aplicar(); })
     .catch(() => { GRID.innerHTML = '<p class="tienda-vacio">No se pudo cargar el catálogo. Escríbenos por WhatsApp.</p>'; });
@@ -44,19 +47,73 @@
         p.cat.toLowerCase().includes(term);
       return okCat && okQ;
     });
-    GRID.innerHTML = '';
-    mostrados = 0;
+    pagina = 1;
     VACIO.hidden = filtrados.length > 0;
     render();
   }
 
   function render() {
+    const pp = porPagina();
+    const tp = totalPaginas();
+    if (pagina > tp) pagina = tp;
+    const ini = (pagina - 1) * pp;
+    const items = filtrados.slice(ini, ini + pp);
     const frag = document.createDocumentFragment();
-    const fin = Math.min(mostrados + LOTE, filtrados.length);
-    for (let i = mostrados; i < fin; i++) frag.appendChild(tarjeta(filtrados[i]));
+    items.forEach(p => frag.appendChild(tarjeta(p)));
+    GRID.innerHTML = '';
     GRID.appendChild(frag);
-    mostrados = fin;
-    MAS.hidden = mostrados >= filtrados.length;
+    renderPaginacion(tp);
+  }
+
+  function irA(p, scroll) {
+    pagina = p;
+    render();
+    if (scroll !== false && SEC) SEC.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderPaginacion(tp) {
+    PAG.innerHTML = '';
+    if (tp <= 1) return;
+
+    const btn = (txt, destino, extra, label) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pag-btn' + (extra ? ' ' + extra : '');
+      b.textContent = txt;
+      if (label) b.setAttribute('aria-label', label);
+      if (destino) b.addEventListener('click', () => irA(destino));
+      else b.disabled = true;
+      return b;
+    };
+
+    PAG.appendChild(btn('‹', pagina > 1 ? pagina - 1 : null, 'pag-nav', 'Página anterior'));
+
+    const nums = [...new Set([1, pagina - 1, pagina, pagina + 1, tp])].filter(n => n >= 1 && n <= tp).sort((a, b) => a - b);
+    let last = 0;
+    nums.forEach(n => {
+      if (n - last > 1) {
+        const d = document.createElement('span');
+        d.className = 'pag-dots';
+        d.textContent = '…';
+        PAG.appendChild(d);
+      }
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pag-num' + (n === pagina ? ' activo' : '');
+      b.textContent = n;
+      b.setAttribute('aria-label', 'Página ' + n);
+      if (n === pagina) b.setAttribute('aria-current', 'page');
+      b.addEventListener('click', () => irA(n));
+      PAG.appendChild(b);
+      last = n;
+    });
+
+    PAG.appendChild(btn('›', pagina < tp ? pagina + 1 : null, 'pag-nav', 'Página siguiente'));
+
+    const info = document.createElement('span');
+    info.className = 'pag-info';
+    info.textContent = 'Página ' + pagina + ' de ' + tp + ' · ' + filtrados.length + ' productos';
+    PAG.appendChild(info);
   }
 
   function tarjeta(p) {
@@ -86,5 +143,15 @@
     clearTimeout(t);
     t = setTimeout(() => { q = BUSCAR.value; aplicar(); }, 180);
   });
-  MAS.addEventListener('click', render);
+
+  // Recalcular por página al cambiar entre móvil/escritorio
+  const onBP = () => { if (filtrados.length) render(); };
+  if (mqMovil.addEventListener) mqMovil.addEventListener('change', onBP);
+  else if (mqMovil.addListener) mqMovil.addListener(onBP);
+
+  let rt;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { if (filtrados.length) render(); }, 160);
+  });
 })();
