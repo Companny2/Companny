@@ -15,6 +15,8 @@
 
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // minúsculas + sin tildes, para buscar sin importar acentos
+  const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   const porPagina = () => mqMovil.matches ? 6 : 8;
   const totalPaginas = () => Math.max(1, Math.ceil(filtrados.length / porPagina()));
 
@@ -38,14 +40,14 @@
   }
 
   function aplicar() {
-    const term = q.trim().toLowerCase();
+    // divide la búsqueda en palabras: deben estar TODAS (en cualquier orden)
+    const toks = norm(q).split(/\s+/).filter(Boolean);
     filtrados = todos.filter(p => {
       const okCat = cat === 'Todas' || p.cat === cat;
-      const okQ = !term ||
-        p.nombre.toLowerCase().includes(term) ||
-        (p.codigo || '').toLowerCase().includes(term) ||
-        p.cat.toLowerCase().includes(term);
-      return okCat && okQ;
+      if (!okCat) return false;
+      if (!toks.length) return true;
+      const hay = norm(p.nombre + ' ' + (p.codigo || '') + ' ' + p.cat);
+      return toks.every(t => hay.includes(t));
     });
     pagina = 1;
     VACIO.hidden = filtrados.length > 0;
