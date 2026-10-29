@@ -17,7 +17,8 @@
   .pill.on{background:rgba(63,209,122,.15);color:var(--ok)}
   .pill.lo{background:rgba(255,178,59,.15);color:var(--lo)}
   .pill.off{background:rgba(255,93,93,.15);color:var(--bad)}
-  main{max-width:900px;margin:0 auto;padding:16px;display:grid;gap:16px}
+  main{max-width:900px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+  .grid{min-width:0}
   .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
   .card h2{margin:0 0 10px;font-size:13px;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center}
@@ -34,7 +35,7 @@
   .m.sos{background:#5c1a1a;border:1px solid var(--bad)}
   .vacio{color:var(--mu);margin:auto;font-size:14px}
   form{display:flex;gap:8px}
-  input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font:inherit}
+  input{flex:1;min-width:0;width:0;background:var(--bg);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font:inherit}
   button{border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
   #env{background:var(--az);color:#04121f}
   #sos{background:var(--bad);color:#fff}
