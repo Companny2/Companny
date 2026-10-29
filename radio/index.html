@@ -25,6 +25,8 @@
   .big{font-size:30px;font-weight:700;line-height:1.1}
   .big span{font-size:15px;color:var(--mu);font-weight:400}
   .sub{font-size:13px;color:var(--mu);margin-top:6px}
+  #aviso{padding:12px 16px;font-size:14px;color:var(--mu);border-color:rgba(255,178,59,.4);background:rgba(255,178,59,.06)}
+  #aviso b{color:var(--lo)}
   #alerta{display:none;background:var(--bad);color:#fff;border-radius:14px;padding:14px 16px;font-weight:700;align-items:center;justify-content:space-between;animation:p 1s infinite}
   #alerta button{background:#fff;color:var(--bad);border:0;border-radius:8px;padding:6px 12px;font-weight:700}
   @keyframes p{50%{opacity:.75}}
@@ -50,29 +52,30 @@
 </header>
 
 <main>
+  <div id="aviso" class="card">ℹ️ <b>Sin datos por falta de enlace.</b> Los valores se muestran en 0 hasta que la estación base se conecte y envíe información.</div>
   <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 
   <div class="grid">
     <section class="card">
-      <h2>Estación base <span id="stBase" class="pill">—</span></h2>
-      <div class="big" id="baseTxt">—</div>
-      <div class="sub" id="baseSub">Esperando datos de la base…</div>
+      <h2>Estación base <span id="stBase" class="pill off">Sin enlace</span></h2>
+      <div class="big" id="baseTxt">0<span> estaciones</span></div>
+      <div class="sub" id="baseSub">Sin datos: no hay enlace con la estación base</div>
     </section>
     <section class="card">
-      <h2>⚡ Enlace cercano <span id="stCerca" class="pill">—</span></h2>
-      <div class="big" id="cercaRssi">—<span> dBm</span></div>
+      <h2>⚡ Enlace cercano <span id="stCerca" class="pill off">Sin enlace</span></h2>
+      <div class="big" id="cercaRssi">0<span> dBm</span></div>
       <div class="sub">ESP-NOW: texto, fotos y notas de voz</div>
     </section>
     <section class="card">
-      <h2>📡 Enlace LoRa <span id="stLora" class="pill">—</span></h2>
-      <div class="big" id="loraRssi">—<span> dBm</span></div>
-      <div class="sub" id="loraSnr">SNR —</div>
+      <h2>📡 Enlace LoRa <span id="stLora" class="pill off">Sin enlace</span></h2>
+      <div class="big" id="loraRssi">0<span> dBm</span></div>
+      <div class="sub" id="loraSnr">SNR 0 dB · sin datos</div>
     </section>
   </div>
 
   <section class="card">
     <h2>Mensajes</h2>
-    <div id="log"><div class="vacio" id="vacio">Sin mensajes todavía</div></div>
+    <div id="log"><div class="vacio" id="vacio">0 mensajes · sin enlace con las estaciones</div></div>
     <form id="f">
       <input id="txt" maxlength="150" placeholder="Escribe a las estaciones…" autocomplete="off">
       <button id="env">Enviar</button>
@@ -104,20 +107,34 @@ $("prefix").addEventListener("change", () => {
 // --- estado de los enlaces ---
 let ultimoEstado = 0;
 function pill(el, on, txtOn, txtOff, cls = "on") { el.textContent = on ? txtOn : txtOff; el.className = "pill " + (on ? cls : "off"); }
+// Sin enlace: todos los valores en 0
+function sinEnlace() {
+  $("aviso").style.display = "";
+  pill($("stBase"), false, "", "Sin enlace");
+  $("baseTxt").innerHTML = "0<span> estaciones</span>";
+  $("baseSub").textContent = "Sin datos: no hay enlace con la estación base";
+  pill($("stCerca"), false, "", "Sin enlace");
+  $("cercaRssi").innerHTML = "0<span> dBm</span>";
+  pill($("stLora"), false, "", "Sin enlace");
+  $("loraRssi").innerHTML = "0<span> dBm</span>";
+  $("loraSnr").textContent = "SNR 0 dB · sin datos";
+}
 function mostrarEstado(e, vivo) {
-  if (vivo) ultimoEstado = Date.now();
-  if (!e.base) { pill($("stBase"), false, "", "Apagada"); $("baseTxt").textContent = "Apagada"; return; }
-  $("baseTxt").textContent = "En línea";
+  if (!vivo) return;                       // un dato guardado no indica enlace actual
+  ultimoEstado = Date.now();
+  if (!e.base) { sinEnlace(); return; }
+  $("aviso").style.display = "none";
+  pill($("stBase"), true, "En línea", "");
+  $("baseTxt").innerHTML = "En línea";
   $("baseSub").textContent = "Conectada al WiFi de casa y a este servidor";
   pill($("stCerca"), e.cerca.on, "Cerca", "Fuera de alcance");
-  $("cercaRssi").innerHTML = (e.cerca.on ? e.cerca.rssi : "—") + "<span> dBm</span>";
+  $("cercaRssi").innerHTML = (e.cerca.on ? e.cerca.rssi : 0) + "<span> dBm</span>";
   pill($("stLora"), e.lora.on, "Activo", "Sin señal", "lo");
-  $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : "—") + "<span> dBm</span>";
-  $("loraSnr").textContent = "SNR " + (e.lora.on ? e.lora.snr + " dB" : "—") + " · el mínimo útil en SF9 es -12 dB";
+  $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : 0) + "<span> dBm</span>";
+  $("loraSnr").textContent = e.lora.on ? "SNR " + e.lora.snr + " dB · el mínimo útil en SF9 es -12 dB" : "SNR 0 dB · sin datos";
 }
-setInterval(() => {   // la base publica su estado cada 10 s
-  const on = Date.now() - ultimoEstado < 30000;
-  pill($("stBase"), on, "En línea", "Sin datos");
+setInterval(() => {   // la base publica su estado cada 10 s; 30 s sin datos = sin enlace
+  if (!DEMO && Date.now() - ultimoEstado > 30000) sinEnlace();
 }, 1000);
 
 // --- mensajes ---
