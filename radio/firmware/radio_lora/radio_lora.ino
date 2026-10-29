@@ -3,7 +3,7 @@
    RADIO HÍBRIDA ESP32 + LoRa (REYAX RYLR998)
   ============================================================================
    Cada estación = 1 ESP32 + 1 RYLR998. Tu celular se conecta al WiFi que
-   crea el ESP32 y abre un chat en http://192.168.4.1
+   crea el ESP32 y usa un chat en http://192.168.4.1
 
    - CERCA  (ESP-NOW, ~100-200 m): texto, notas de voz y fotos.
    - LEJOS  (LoRa, varios km):     texto y SOS.
@@ -31,7 +31,7 @@ const char* WIFI_SSID    = "TU_WIFI";
 const char* WIFI_PASS    = "TU_CLAVE";
 const char* MQTT_HOST    = "broker.hivemq.com";
 const int   MQTT_PORT    = 1883;
-const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // ¡cámbialo! igual en la web
+const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único (igual en la web)
 
 // LoRa (RYLR998): debe ser igual en las dos placas
 #define LORA_RX_PIN  16                    // RX2 del ESP32 <- TXD del RYLR998
@@ -43,7 +43,7 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // ¡cámbialo! igual e
 #define LORA_CLAVE   "4F7A21C9"            // cifrado: 8 dígitos hex, igual en ambas
 
 #define LED_PIN   2                        // LED azul de la placa
-#define BOTON_SOS 0                         // botón BOOT: mantener 2 s = SOS
+#define BOTON_SOS 0                         // botón BOOT: pulsación de 2 s = SOS
 
 // ---------------------------------------------------------------------------
 // 2) LIBRERÍAS
@@ -739,7 +739,7 @@ void loop() {
   static bool cercaAntes = false;
   if (cerca() != cercaAntes) { cercaAntes = cerca(); version++; }
 
-  // Botón BOOT: mantener 2 s = SOS
+  // Botón BOOT: pulsación de 2 s = SOS
   static uint32_t pulsado = 0;
   if (digitalRead(BOTON_SOS) == LOW) {
     if (!pulsado) pulsado = millis();
