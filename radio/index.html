@@ -19,7 +19,14 @@
   .pill.off{background:rgba(255,93,93,.15);color:var(--bad)}
   main{max-width:900px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
   .grid{min-width:0}
-  .clima{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--mu);margin:4px 0}
+  #grafCard .tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  #grafCard .tab{font-size:12px;padding:5px 11px;border-radius:99px;background:var(--line);color:var(--mu);border:0;font-weight:600}
+  #grafCard .tab.sel{background:var(--az);color:#04121f}
+  #grafCard .ley{margin-left:auto;font-size:12px;color:var(--mu)}
+  #gSvg{width:100%;height:220px;display:block}
+  .clima{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--mu);margin:4px 0}
+  .clima span{white-space:nowrap}
+  .clima b{text-align:right}
   .clima b{font-size:17px;color:var(--tx)}
   .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -81,6 +88,13 @@
     </section>
   </div>
 
+  <section class="card" id="grafCard">
+    <h2>📈 Historial (última hora)</h2>
+    <div class="tabs"><button class="tab sel" data-k="t">Temperatura</button><button class="tab" data-k="h">Humedad</button><button class="tab" data-k="g">Gas</button>
+      <span class="ley"><b style="color:#3ba7ff">━</b> Estación 1 &nbsp;<b style="color:#ffb23b">━</b> Estación 2</span></div>
+    <svg id="gSvg"></svg>
+  </section>
+
   <section class="card">
     <h2>Mensajes</h2>
     <div id="log"><div class="vacio" id="vacio">0 mensajes · sin enlace con las estaciones</div></div>
@@ -128,8 +142,36 @@ function sinEnlace() {
   $("loraSnr").textContent = "SNR 0 dB · sin datos";
   mostrarClima(null);
 }
+// --- historial y gráfica (se acumula mientras la página está abierta) ---
+let hist = [], gK = "t";
+const gUni = { t: "°C", h: "%", g: "%" };
+function graficar() {
+  const svg = $("gSvg"), W = svg.clientWidth || 600, H = 220, L = 40, R = 10, T = 10, B = 22, ahora = Date.now();
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  const ser = [["1", "#3ba7ff"], ["2", "#ffb23b"]].map(([n, c]) => ({ c,
+    p: hist.filter(q => q[n] && q[n][gK] != null).map(q => [(q.ms - ahora) / 60000, q[n][gK]]).filter(q => q[0] >= -60) }));
+  const ys = ser.flatMap(s => s.p.map(q => q[1]));
+  if (!ys.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#8a9bab" font-size="13" text-anchor="middle">0 datos · sin enlace con las estaciones</text>'; return; }
+  let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 2) { lo -= 1; hi += 1; }
+  const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  let h = "";
+  for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3, y = yy(v).toFixed(1);
+    h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#253241"/><text x="' + (L - 6) + '" y="' + (+y + 4) + '" fill="#8a9bab" font-size="11" text-anchor="end">' + v.toFixed(gK == "t" ? 1 : 0) + '</text>'; }
+  [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 5) + '" fill="#8a9bab" font-size="11" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
+  ser.forEach(s => { if (!s.p.length) return;
+    h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2.2" points="' + s.p.map(q => xs(q[0]).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
+    const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3.5" fill="' + s.c + '"/>'; });
+  h += '<text x="' + (W - R) + '" y="' + (T + 12) + '" fill="#8a9bab" font-size="11" text-anchor="end">' + gUni[gK] + '</text>';
+  svg.innerHTML = h;
+}
+document.querySelectorAll("#grafCard .tab").forEach(b => b.onclick = () => {
+  gK = b.dataset.k; document.querySelectorAll("#grafCard .tab").forEach(x => x.classList.toggle("sel", x == b)); graficar(); });
+window.addEventListener("resize", graficar);
+
 // Tarjeta de clima: 0 °C · 0 % cuando no hay datos de una estación
-function mostrarClima(c) {
+function mostrarClima(c, vivo) {
+  if (vivo && c && (c["1"] || c["2"])) { hist.push({ ms: Date.now(), "1": c["1"], "2": c["2"] }); if (hist.length > 400) hist.shift(); }
+  graficar();
   c = c || {};
   const f = x => (x && x.t != null ? x.t + " °C · " + x.h + " %" : "0 °C · 0 %") + " · gas " + (x && x.g != null ? x.g : 0) + " %";
   $("cl1").textContent = f(c["1"]); $("cl2").textContent = f(c["2"]);
@@ -150,7 +192,7 @@ function mostrarEstado(e, vivo) {
   pill($("stLora"), e.lora.on, "Activo", "Sin señal", "lo");
   $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : 0) + "<span> dBm</span>";
   $("loraSnr").textContent = e.lora.on ? "SNR " + e.lora.snr + " dB · el mínimo útil en SF9 es -12 dB" : "SNR 0 dB · sin datos";
-  mostrarClima(e.clima);
+  mostrarClima(e.clima, true);
 }
 setInterval(() => {   // la base publica su estado cada 10 s; 30 s sin datos = sin enlace
   if (!DEMO && Date.now() - ultimoEstado > 30000) sinEnlace();
@@ -204,6 +246,9 @@ $("sos").onclick = () => {
 // --- modo demostración (?demo) ---
 if (DEMO) {
   pill($("conn"), true, "Demo", "");
+  for (let i = 120; i > 0; i--) hist.push({ ms: Date.now() - i * 30000,
+    "1": { t: +(27.5 + Math.sin(i / 20) * 1.2).toFixed(1), h: Math.round(70 + Math.cos(i / 25) * 4), g: Math.round(12 + Math.sin(i / 9) * 3) },
+    "2": i < 70 ? { t: +(31 + Math.sin(i / 15) * 0.8).toFixed(1), h: Math.round(63 + Math.sin(i / 18) * 3), g: Math.round(17 + Math.cos(i / 7) * 2) } : null });
   mostrarEstado({ base: true, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, clima: { "1": { t: 27.8, h: 71, g: 12 }, "2": { t: 31.4, h: 64, g: 18 } } }, true);
   addMsg({ de: 2, t: 0, via: "L", x: "Llegué al cerro, ¿me copias?" });
   addMsg({ de: 1, t: 0, via: "L", x: "Fuerte y claro 👍" });

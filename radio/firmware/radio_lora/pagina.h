@@ -33,12 +33,20 @@ input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(
 .b{background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:0 12px;font-size:18px}
 .b:disabled{opacity:.35}
 #env{background:#3ba7ff;color:#04121f;border:0;font-weight:700;font-size:15px}
+#graf{border-bottom:1px solid var(--line);padding:8px 12px}
+#graf .tabs{display:flex;gap:6px;align-items:center}
+#graf .tab{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--line);color:var(--mu);border:0}
+#graf .tab.sel{background:#3ba7ff;color:#04121f;font-weight:700}
+#graf .ley{margin-left:auto;font-size:11px;color:var(--mu)}
+#graf svg{width:100%;height:150px;display:block;margin-top:6px}
+#graf.cerrado svg,#graf.cerrado .tab:not(#gTog){display:none}
 #aviso{display:none;position:fixed;left:12px;right:12px;bottom:70px;background:#000c;padding:10px 12px;border-radius:10px;font-size:14px}
 </style></head><body>
 <header>
   <div class="top"><h1 id="tit">Radio</h1><button id="sosBtn">SOS</button></div>
   <div class="chips"><span id="cCerca" class="chip">⚡ Cerca: —</span><span id="cLora" class="chip">📡 LoRa: —</span><span id="cWeb" class="chip" style="display:none">🌐 Web</span><span id="cClima" class="chip">🌡 Clima: —</span></div>
 </header>
+<div id="graf"><div class="tabs"><button class="tab sel" id="gTog">📈 Gráfica</button><button class="tab sel" data-k="1">Temp.</button><button class="tab" data-k="2">Humedad</button><button class="tab" data-k="3">Gas</button><span class="ley"><b style="color:#3ba7ff">━</b> Aquí <b style="color:#ffb23b">━</b> Otro</span></div><svg id="gSvg"></svg></div>
 <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 <div id="lista"><div class="vacio" id="vacio">Aún no hay mensajes.<br>Escribe abajo para empezar.</div></div>
 <div id="aviso"></div>
@@ -157,6 +165,40 @@ $("iAudio").onchange = e => {
   let ext = (f.name.split(".").pop() || "m4a").toLowerCase().slice(0, 5);
   subir(f, "audio", ext);
 };
+// --- gráfica (sin internet: se dibuja con SVG) ---
+let gK = 1, gDatos = null;
+const gUni = { 1: "°C", 2: "%", 3: "%" };
+function graficar() {
+  const svg = $("gSvg"), W = svg.clientWidth || 360, H = 150, L = 30, R = 8, T = 8, B = 18;
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  if (!gDatos) { svg.innerHTML = ""; return; }
+  const ser = [["yo", "#3ba7ff"], ["otro", "#ffb23b"]].map(([n, c]) => ({ c, p: (gDatos[n] || []).filter(q => q[gK] != null).map(q => [-q[0] / 60, q[gK]]) }));
+  const ys = ser.flatMap(s => s.p.map(q => q[1]));
+  let h = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#8a9bab" font-size="12" text-anchor="middle">Sin datos todavía</text>';
+  if (ys.length) {
+    let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 2) { lo -= 1; hi += 1; }
+    const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - v) / (hi - lo) * (H - T - B);
+    h = "";
+    for (let i = 0; i <= 2; i++) { const v = lo + (hi - lo) * i / 2, y = yy(v).toFixed(1);
+      h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#253241"/><text x="' + (L - 4) + '" y="' + (+y + 4) + '" fill="#8a9bab" font-size="10" text-anchor="end">' + v.toFixed(gK == 1 ? 1 : 0) + '</text>'; }
+    [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 4) + '" fill="#8a9bab" font-size="10" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
+    ser.forEach(s => { if (!s.p.length) return;
+      h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2" points="' + s.p.map(q => xs(Math.max(q[0], -60)).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
+      const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3" fill="' + s.c + '"/>'; });
+    h += '<text x="' + (W - R) + '" y="' + (T + 10) + '" fill="#8a9bab" font-size="10" text-anchor="end">' + gUni[gK] + '</text>';
+  }
+  svg.innerHTML = h;
+}
+async function cargarHist() {
+  if (!$("graf").classList.contains("cerrado")) {
+    try { gDatos = await (await fetch("/hist")).json(); graficar(); } catch (e) {}
+  }
+  setTimeout(cargarHist, 30000);
+}
+document.querySelectorAll("#graf .tab[data-k]").forEach(b => b.onclick = () => {
+  gK = +b.dataset.k; document.querySelectorAll("#graf .tab[data-k]").forEach(x => x.classList.toggle("sel", x == b)); graficar(); });
+$("gTog").onclick = () => { const g = $("graf"); g.classList.toggle("cerrado"); $("gTog").classList.toggle("sel"); if (!g.classList.contains("cerrado")) fetch("/hist").then(r => r.json()).then(d => { gDatos = d; graficar(); }).catch(() => {}); };
 actualizar();
+cargarHist();
 </script></body></html>
 )PAGINA";

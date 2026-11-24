@@ -56,6 +56,7 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define GAS_PIN        34                   // punto medio del divisor -> D34 (GPIO34)
 #define GAS_ALARMA     60                   // % a partir del cual se envía SOS automático
 #define GAS_CALENTAR_MS 60000               // el sensor necesita ~1 min para calentarse
+#define HIST_N         120                  // historial para la gráfica: 120 puntos = 1 hora
 
 // ---------------------------------------------------------------------------
 // 2) LIBRERÍAS
@@ -93,6 +94,9 @@ enum Estado : uint8_t { ENVIANDO = 0, ENTREGADO = 1, FALLIDO = 2, RECIBIDO = 3 }
 
 // Clima (DHT11): lectura propia y la recibida de la otra estación
 struct Clima { bool okTH = false, okGas = false; float t = 0, h = 0, g = 0; uint32_t cuando = 0; };
+// Historial de lecturas para la gráfica (memoria circular)
+struct Punto { float t, h, g; bool okTH, okGas; uint32_t ms; };
+struct Hist { Punto p[HIST_N]; uint16_t n = 0, ini = 0; };
 
 struct Msg {
   uint16_t id;        // número del mensaje (lo pone quien lo envía)
@@ -149,6 +153,24 @@ bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
 
 Clima climaYo, climaOtro;
 bool climaVigente(const Clima& c) { return (c.okTH || c.okGas) && millis() - c.cuando < 180000; }  // 3 min
+Hist histYo, histOtro;
+void agregarHist(Hist& hs, const Clima& c) {
+  uint16_t i;
+  if (hs.n < HIST_N) { i = (hs.ini + hs.n) % HIST_N; hs.n++; }
+  else { i = hs.ini; hs.ini = (hs.ini + 1) % HIST_N; }      // lleno: reemplaza el más viejo
+  hs.p[i] = {c.t, c.h, c.g, c.okTH, c.okGas, millis()};
+}
+// [[segundos atrás, temp, hum, gas], ...]
+String histJson(const Hist& hs) {
+  String j = "[";
+  for (uint16_t k = 0; k < hs.n; k++) {
+    const Punto& p = hs.p[(hs.ini + k) % HIST_N];
+    if (k) j += ",";
+    j += "[" + String((millis() - p.ms) / 1000) + "," + (p.okTH ? String(p.t, 1) : String("null")) + "," +
+         (p.okTH ? String(p.h, 0) : String("null")) + "," + (p.okGas ? String(p.g, 0) : String("null")) + "]";
+  }
+  return j + "]";
+}
 String climaJson(const Clima& c) {
   if (!climaVigente(c)) return "null";
   String j = "{\"t\":" + (c.okTH ? String(c.t, 1) : String("null")) +
@@ -328,6 +350,7 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
     climaOtro.okGas = (gs != "x");
     climaOtro.g = gs.toFloat();
     climaOtro.cuando = millis();
+    agregarHist(histOtro, climaOtro);
     version++;
     Serial.printf("[CLIMA EQUIPO %d] %s C  %s %%  gas %s %%  (%s)\n", de, ts.c_str(), hs.c_str(), gs.c_str(),
                   via == 'E' ? "cerca" : "LoRa");
@@ -636,6 +659,11 @@ void apiArchivo() {
 void iniciarWeb() {
   server.on("/", []() { server.send_P(200, "text/html", PAGINA); });
   server.on("/api", apiEstado);
+  server.on("/hist", []() {                       // historial para la gráfica
+    String j = "{\"yo\":" + histJson(histYo) + ",\"otro\":" + histJson(histOtro) + "}";
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", j);
+  });
   server.on("/enviar", HTTP_POST, apiEnviar);
   server.on("/sosvisto", HTTP_POST, apiSosVisto);
   server.on("/subir", HTTP_POST, apiSubidaFin, apiSubidaDatos);
@@ -740,6 +768,7 @@ void manejarClima() {
 #endif
   if (!climaYo.okTH && !climaYo.okGas) { version++; return; }
   climaYo.cuando = millis();
+  agregarHist(histYo, climaYo);
   version++;
   Serial.printf("[CLIMA] %s C  %s %%  gas %s %%\n", ts.c_str(), hs.c_str(), gs.c_str());
   String trama = "C," + String(EQUIPO) + "," + ts + "," + hs + "," + gs;
