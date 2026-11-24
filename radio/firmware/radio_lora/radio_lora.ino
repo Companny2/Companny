@@ -85,6 +85,9 @@ const uint8_t BCAST[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 enum Tipo   : uint8_t { TEXTO = 0, SOS = 1, AUDIO = 2, FOTO = 3 };
 enum Estado : uint8_t { ENVIANDO = 0, ENTREGADO = 1, FALLIDO = 2, RECIBIDO = 3 };
 
+// Clima (DHT11): lectura propia y la recibida de la otra estación
+struct Clima { bool ok = false; float t = 0, h = 0; uint32_t cuando = 0; };
+
 struct Msg {
   uint16_t id;        // número del mensaje (lo pone quien lo envía)
   uint8_t  de;        // equipo que lo escribió (0 = página web)
@@ -138,8 +141,6 @@ String T(const char* s) { return String(TOPIC_PREFIX) + "/" + s; }
 
 bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
 
-// Clima: lectura propia y la recibida de la otra estación
-struct Clima { bool ok = false; float t = 0, h = 0; uint32_t cuando = 0; };
 Clima climaYo, climaOtro;
 bool climaVigente(const Clima& c) { return c.ok && millis() - c.cuando < 180000; }  // 3 min
 String climaJson(const Clima& c) {
