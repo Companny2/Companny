@@ -86,7 +86,7 @@ function pintar(j) {
   l.textContent = "📡 LoRa: " + (!j.lora.ok ? "sin módulo" : j.lora.on ? j.lora.rssi + " dBm · SNR " + j.lora.snr : "esperando…");
   l.className = "chip" + (j.lora.on ? " lo" : "");
   if ("web" in j) { const w = $("cWeb"); w.style.display = ""; w.className = "chip" + (j.web ? " on" : ""); w.textContent = "🌐 Web: " + (j.web ? "conectada" : "sin conexión"); }
-  const cl = j.clima || {}, fc = x => x ? x.t + "°C · " + x.h + "%" : "sin datos";
+  const cl = j.clima || {}, fc = x => !x ? "sin datos" : [x.t != null ? x.t + "°C · " + x.h + "%" : "", x.g != null ? "gas " + x.g + "%" : ""].filter(Boolean).join(" · ");
   $("cClima").textContent = "🌡 Aquí: " + fc(cl.yo) + " | Equipo " + j.otro + ": " + fc(cl.otro);
   $("cClima").className = "chip" + (cl.yo || cl.otro ? " on" : "");
   const medios = j.cerca.on && !j.ocupado;

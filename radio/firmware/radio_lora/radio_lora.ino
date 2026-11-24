@@ -51,6 +51,12 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define DHT_TIPO       DHT11
 #define CLIMA_CADA_MS  30000                // enviar clima cada 30 s
 
+// Sensor de gas MQ (salida analógica AO con divisor de voltaje 5 V -> 3.3 V)
+#define USAR_GAS       1                    // 1 = esta estación tiene sensor MQ, 0 = no
+#define GAS_PIN        34                   // punto medio del divisor -> D34 (GPIO34)
+#define GAS_ALARMA     60                   // % a partir del cual se envía SOS automático
+#define GAS_CALENTAR_MS 60000               // el sensor necesita ~1 min para calentarse
+
 // ---------------------------------------------------------------------------
 // 2) LIBRERÍAS
 // ---------------------------------------------------------------------------
@@ -86,7 +92,7 @@ enum Tipo   : uint8_t { TEXTO = 0, SOS = 1, AUDIO = 2, FOTO = 3 };
 enum Estado : uint8_t { ENVIANDO = 0, ENTREGADO = 1, FALLIDO = 2, RECIBIDO = 3 };
 
 // Clima (DHT11): lectura propia y la recibida de la otra estación
-struct Clima { bool ok = false; float t = 0, h = 0; uint32_t cuando = 0; };
+struct Clima { bool okTH = false, okGas = false; float t = 0, h = 0, g = 0; uint32_t cuando = 0; };
 
 struct Msg {
   uint16_t id;        // número del mensaje (lo pone quien lo envía)
@@ -142,10 +148,13 @@ String T(const char* s) { return String(TOPIC_PREFIX) + "/" + s; }
 bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
 
 Clima climaYo, climaOtro;
-bool climaVigente(const Clima& c) { return c.ok && millis() - c.cuando < 180000; }  // 3 min
+bool climaVigente(const Clima& c) { return (c.okTH || c.okGas) && millis() - c.cuando < 180000; }  // 3 min
 String climaJson(const Clima& c) {
   if (!climaVigente(c)) return "null";
-  return "{\"t\":" + String(c.t, 1) + ",\"h\":" + String(c.h, 0) + "}";
+  String j = "{\"t\":" + (c.okTH ? String(c.t, 1) : String("null")) +
+             ",\"h\":" + (c.okTH ? String(c.h, 0) : String("null")) +
+             ",\"g\":" + (c.okGas ? String(c.g, 0) : String("null")) + "}";
+  return j;
 }
 #if USAR_DHT
 DHT dht(DHT_PIN, DHT_TIPO);
@@ -308,15 +317,20 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
 
   if (tipoTrama == 'P') return;                   // latido: ya se anotó la señal
 
-  if (tipoTrama == 'C') {                         // clima: C,<de>,<temp>,<hum>
+  if (tipoTrama == 'C') {                         // clima: C,<de>,<temp>,<hum>,<gas>  ("x" = sin dato)
     int c2 = s.indexOf(',', c1 + 1);
-    if (c1 < 0 || c2 < 0) return;
-    climaOtro.ok = true;
-    climaOtro.t = s.substring(c1 + 1, c2).toFloat();
-    climaOtro.h = s.substring(c2 + 1).toFloat();
+    int c3 = s.indexOf(',', c2 + 1);
+    if (c1 < 0 || c2 < 0 || c3 < 0) return;
+    String ts = s.substring(c1 + 1, c2), hs = s.substring(c2 + 1, c3), gs = s.substring(c3 + 1);
+    climaOtro.okTH = (ts != "x" && hs != "x");
+    climaOtro.t = ts.toFloat();
+    climaOtro.h = hs.toFloat();
+    climaOtro.okGas = (gs != "x");
+    climaOtro.g = gs.toFloat();
     climaOtro.cuando = millis();
     version++;
-    Serial.printf("[CLIMA EQUIPO %d] %.1f C  %.0f %%  (%s)\n", de, climaOtro.t, climaOtro.h, via == 'E' ? "cerca" : "LoRa");
+    Serial.printf("[CLIMA EQUIPO %d] %s C  %s %%  gas %s %%  (%s)\n", de, ts.c_str(), hs.c_str(), gs.c_str(),
+                  via == 'E' ? "cerca" : "LoRa");
     return;
   }
 
@@ -684,22 +698,51 @@ void publicarMsg(const Msg& m) {
 }
 
 // Lee el DHT11 cada 30 s y lo envía a la otra estación (cerca: ESP-NOW, lejos: LoRa)
+// Lee el sensor de gas: promedio de 16 lecturas, en % de la escala (0-100)
+float leerGas() {
+  uint32_t suma = 0;
+  for (int i = 0; i < 16; i++) { suma += analogRead(GAS_PIN); delay(2); }
+  return (suma / 16.0f) * 100.0f / 4095.0f;
+}
+
+// Lee los sensores cada 30 s y envía los datos a la otra estación
+// (cerca: ESP-NOW, lejos: LoRa). Si el gas supera GAS_ALARMA, envía SOS.
 void manejarClima() {
-#if USAR_DHT
+#if USAR_DHT || USAR_GAS
   static uint32_t proximo = 3000;                 // primera lectura a los 3 s
   if ((int32_t)(millis() - proximo) < 0) return;
   proximo = millis() + CLIMA_CADA_MS;
+  String ts = "x", hs = "x", gs = "x";
+#if USAR_DHT
   float t = dht.readTemperature();
   float h = dht.readHumidity();
   if (isnan(t) || isnan(h)) {
     Serial.println("!! DHT11 sin lectura: revisa VCC->3V3, DAT->D4 (GPIO4) y GND");
-    if (climaYo.ok) { climaYo.ok = false; version++; }
-    return;
+    climaYo.okTH = false;
+  } else {
+    climaYo.okTH = true; climaYo.t = t; climaYo.h = h;
+    ts = String(t, 1); hs = String(h, 0);
   }
-  climaYo.ok = true; climaYo.t = t; climaYo.h = h; climaYo.cuando = millis();
+#endif
+#if USAR_GAS
+  float g = leerGas();
+  climaYo.okGas = true; climaYo.g = g;
+  gs = String(g, 0);
+  static bool alarmaGas = false;
+  if (millis() < GAS_CALENTAR_MS) {
+    Serial.println("[GAS] calentando el sensor...");
+  } else if (!alarmaGas && g >= GAS_ALARMA) {
+    alarmaGas = true;
+    enviarMensaje(SOS, "SOS: gas detectado (" + gs + " %)");
+  } else if (alarmaGas && g < GAS_ALARMA - 10) {
+    alarmaGas = false;                            // se rearma al bajar del umbral
+  }
+#endif
+  if (!climaYo.okTH && !climaYo.okGas) { version++; return; }
+  climaYo.cuando = millis();
   version++;
-  Serial.printf("[CLIMA] %.1f C  %.0f %%\n", t, h);
-  String trama = "C," + String(EQUIPO) + "," + String(t, 1) + "," + String(h, 0);
+  Serial.printf("[CLIMA] %s C  %s %%  gas %s %%\n", ts.c_str(), hs.c_str(), gs.c_str());
+  String trama = "C," + String(EQUIPO) + "," + ts + "," + hs + "," + gs;
   if (cerca()) espEnviarTexto(trama);
   else loraEnviar(trama);
 #endif
@@ -717,6 +760,9 @@ void setup() {
   siguienteId = esp_random() % 50000 + 1;         // al azar: evita repetidos tras reiniciar
 #if USAR_DHT
   dht.begin();
+#endif
+#if USAR_GAS
+  analogSetPinAttenuation(GAS_PIN, ADC_11db);     // rango completo 0-3.3 V
 #endif
 
   // Memoria para fotos y audios (se borra al encender)
