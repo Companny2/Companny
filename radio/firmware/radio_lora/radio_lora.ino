@@ -45,6 +45,12 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define LED_PIN   2                        // LED azul de la placa
 #define BOTON_SOS 0                         // botón BOOT: pulsación de 2 s = SOS
 
+// Sensor de temperatura y humedad DHT11
+#define USAR_DHT       1                    // 1 = esta estación tiene DHT11, 0 = no
+#define DHT_PIN        4                    // DAT del DHT11 -> D4 (GPIO4)
+#define DHT_TIPO       DHT11
+#define CLIMA_CADA_MS  30000                // enviar clima cada 30 s
+
 // ---------------------------------------------------------------------------
 // 2) LIBRERÍAS
 // ---------------------------------------------------------------------------
@@ -56,6 +62,9 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #include <LittleFS.h>
 #include <vector>
 #include "pagina.h"                        // la página del chat (HTML)
+#if USAR_DHT
+#include <DHT.h>                            // librería "DHT sensor library" (Adafruit)
+#endif
 #if ES_BASE
 #include <PubSubClient.h>
 #endif
@@ -128,6 +137,18 @@ String T(const char* s) { return String(TOPIC_PREFIX) + "/" + s; }
 #endif
 
 bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
+
+// Clima: lectura propia y la recibida de la otra estación
+struct Clima { bool ok = false; float t = 0, h = 0; uint32_t cuando = 0; };
+Clima climaYo, climaOtro;
+bool climaVigente(const Clima& c) { return c.ok && millis() - c.cuando < 180000; }  // 3 min
+String climaJson(const Clima& c) {
+  if (!climaVigente(c)) return "null";
+  return "{\"t\":" + String(c.t, 1) + ",\"h\":" + String(c.h, 0) + "}";
+}
+#if USAR_DHT
+DHT dht(DHT_PIN, DHT_TIPO);
+#endif
 bool loraVivo() { return ultimoLora && millis() - ultimoLora < LORA_VIVO_MS; }
 
 // ---------------------------------------------------------------------------
@@ -285,6 +306,18 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
   if (de == EQUIPO) return;                       // eco de mí mismo
 
   if (tipoTrama == 'P') return;                   // latido: ya se anotó la señal
+
+  if (tipoTrama == 'C') {                         // clima: C,<de>,<temp>,<hum>
+    int c2 = s.indexOf(',', c1 + 1);
+    if (c1 < 0 || c2 < 0) return;
+    climaOtro.ok = true;
+    climaOtro.t = s.substring(c1 + 1, c2).toFloat();
+    climaOtro.h = s.substring(c2 + 1).toFloat();
+    climaOtro.cuando = millis();
+    version++;
+    Serial.printf("[CLIMA EQUIPO %d] %.1f C  %.0f %%  (%s)\n", de, climaOtro.t, climaOtro.h, via == 'E' ? "cerca" : "LoRa");
+    return;
+  }
 
   int c2 = s.indexOf(',', c1 + 1);
   uint16_t id = s.substring(c1 + 1, c2 < 0 ? s.length() : c2).toInt();
@@ -507,6 +540,7 @@ void apiEstado() {
        ",\"rssi\":" + String(loraRssi) + ",\"snr\":" + String(loraSnr) + "}";
   j += ",\"ocupado\":" + String(tx.activo ? "true" : "false");
   j += ",\"sos\":" + String(sosDe);
+  j += ",\"clima\":{\"yo\":" + climaJson(climaYo) + ",\"otro\":" + climaJson(climaOtro) + "}";
 #if ES_BASE
   j += ",\"web\":" + String(mqtt.connected() ? "true" : "false");
 #endif
@@ -631,7 +665,8 @@ void mqttLoop() {
     ultimo = millis();
     String j = "{\"base\":true,\"cerca\":{\"on\":" + String(cerca() ? "true" : "false") + ",\"rssi\":" + String(espRssi) +
                "},\"lora\":{\"on\":" + String(loraVivo() ? "true" : "false") + ",\"rssi\":" + String(loraRssi) +
-               ",\"snr\":" + String(loraSnr) + "}}";
+               ",\"snr\":" + String(loraSnr) + "},\"clima\":{\"" + String(EQUIPO) + "\":" + climaJson(climaYo) +
+               ",\"" + String(OTRO) + "\":" + climaJson(climaOtro) + "}}";
     mqtt.publish(T("estado").c_str(), j.c_str(), true);
   }
 }
@@ -647,6 +682,28 @@ void publicarMsg(const Msg& m) {
 #endif
 }
 
+// Lee el DHT11 cada 30 s y lo envía a la otra estación (cerca: ESP-NOW, lejos: LoRa)
+void manejarClima() {
+#if USAR_DHT
+  static uint32_t proximo = 3000;                 // primera lectura a los 3 s
+  if ((int32_t)(millis() - proximo) < 0) return;
+  proximo = millis() + CLIMA_CADA_MS;
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  if (isnan(t) || isnan(h)) {
+    Serial.println("!! DHT11 sin lectura: revisa VCC->3V3, DAT->D4 (GPIO4) y GND");
+    if (climaYo.ok) { climaYo.ok = false; version++; }
+    return;
+  }
+  climaYo.ok = true; climaYo.t = t; climaYo.h = h; climaYo.cuando = millis();
+  version++;
+  Serial.printf("[CLIMA] %.1f C  %.0f %%\n", t, h);
+  String trama = "C," + String(EQUIPO) + "," + String(t, 1) + "," + String(h, 0);
+  if (cerca()) espEnviarTexto(trama);
+  else loraEnviar(trama);
+#endif
+}
+
 // ---------------------------------------------------------------------------
 // 12) SETUP
 // ---------------------------------------------------------------------------
@@ -657,6 +714,9 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   pinMode(BOTON_SOS, INPUT_PULLUP);
   siguienteId = esp_random() % 50000 + 1;         // al azar: evita repetidos tras reiniciar
+#if USAR_DHT
+  dht.begin();
+#endif
 
   // Memoria para fotos y audios (se borra al encender)
   if (!LittleFS.begin(true)) Serial.println("!! Error de memoria LittleFS");
@@ -726,6 +786,7 @@ void loop() {
   }
 
   loraLoop();
+  manejarClima();
   revisarPendientes();
   txLoop();
   rxLoop();

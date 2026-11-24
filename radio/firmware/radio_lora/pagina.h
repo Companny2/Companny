@@ -37,7 +37,7 @@ input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(
 </style></head><body>
 <header>
   <div class="top"><h1 id="tit">Radio</h1><button id="sosBtn">SOS</button></div>
-  <div class="chips"><span id="cCerca" class="chip">⚡ Cerca: —</span><span id="cLora" class="chip">📡 LoRa: —</span><span id="cWeb" class="chip" style="display:none">🌐 Web</span></div>
+  <div class="chips"><span id="cCerca" class="chip">⚡ Cerca: —</span><span id="cLora" class="chip">📡 LoRa: —</span><span id="cWeb" class="chip" style="display:none">🌐 Web</span><span id="cClima" class="chip">🌡 Clima: —</span></div>
 </header>
 <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 <div id="lista"><div class="vacio" id="vacio">Aún no hay mensajes.<br>Escribe abajo para empezar.</div></div>
@@ -86,6 +86,9 @@ function pintar(j) {
   l.textContent = "📡 LoRa: " + (!j.lora.ok ? "sin módulo" : j.lora.on ? j.lora.rssi + " dBm · SNR " + j.lora.snr : "esperando…");
   l.className = "chip" + (j.lora.on ? " lo" : "");
   if ("web" in j) { const w = $("cWeb"); w.style.display = ""; w.className = "chip" + (j.web ? " on" : ""); w.textContent = "🌐 Web: " + (j.web ? "conectada" : "sin conexión"); }
+  const cl = j.clima || {}, fc = x => x ? x.t + "°C · " + x.h + "%" : "sin datos";
+  $("cClima").textContent = "🌡 Aquí: " + fc(cl.yo) + " | Equipo " + j.otro + ": " + fc(cl.otro);
+  $("cClima").className = "chip" + (cl.yo || cl.otro ? " on" : "");
   const medios = j.cerca.on && !j.ocupado;
   $("bFoto").disabled = $("bAudio").disabled = !medios;
 

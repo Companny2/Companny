@@ -19,6 +19,8 @@
   .pill.off{background:rgba(255,93,93,.15);color:var(--bad)}
   main{max-width:900px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
   .grid{min-width:0}
+  .clima{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;color:var(--mu);margin:4px 0}
+  .clima b{font-size:20px;color:var(--tx)}
   .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
   .card h2{margin:0 0 10px;font-size:13px;color:var(--mu);text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between;align-items:center}
@@ -71,6 +73,12 @@
       <div class="big" id="loraRssi">0<span> dBm</span></div>
       <div class="sub" id="loraSnr">SNR 0 dB · sin datos</div>
     </section>
+    <section class="card">
+      <h2>🌡 Clima (DHT11) <span id="stClima" class="pill off">Sin enlace</span></h2>
+      <div class="clima"><span>Estación 1</span><b id="cl1">0 °C · 0 %</b></div>
+      <div class="clima"><span>Estación 2</span><b id="cl2">0 °C · 0 %</b></div>
+      <div class="sub" id="clSub">Sin datos de temperatura y humedad</div>
+    </section>
   </div>
 
   <section class="card">
@@ -118,6 +126,16 @@ function sinEnlace() {
   pill($("stLora"), false, "", "Sin enlace");
   $("loraRssi").innerHTML = "0<span> dBm</span>";
   $("loraSnr").textContent = "SNR 0 dB · sin datos";
+  mostrarClima(null);
+}
+// Tarjeta de clima: 0 °C · 0 % cuando no hay datos de una estación
+function mostrarClima(c) {
+  c = c || {};
+  const f = x => x ? x.t + " °C · " + x.h + " %" : "0 °C · 0 %";
+  $("cl1").textContent = f(c["1"]); $("cl2").textContent = f(c["2"]);
+  const hay = !!(c["1"] || c["2"]);
+  pill($("stClima"), hay, "Con datos", "Sin enlace", "on");
+  $("clSub").textContent = hay ? "Temperatura y humedad, actualizadas cada 30 s" : "Sin datos de temperatura y humedad";
 }
 function mostrarEstado(e, vivo) {
   if (!vivo) return;                       // un dato guardado no indica enlace actual
@@ -132,6 +150,7 @@ function mostrarEstado(e, vivo) {
   pill($("stLora"), e.lora.on, "Activo", "Sin señal", "lo");
   $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : 0) + "<span> dBm</span>";
   $("loraSnr").textContent = e.lora.on ? "SNR " + e.lora.snr + " dB · el mínimo útil en SF9 es -12 dB" : "SNR 0 dB · sin datos";
+  mostrarClima(e.clima);
 }
 setInterval(() => {   // la base publica su estado cada 10 s; 30 s sin datos = sin enlace
   if (!DEMO && Date.now() - ultimoEstado > 30000) sinEnlace();
@@ -185,7 +204,7 @@ $("sos").onclick = () => {
 // --- modo demostración (?demo) ---
 if (DEMO) {
   pill($("conn"), true, "Demo", "");
-  mostrarEstado({ base: true, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 } }, true);
+  mostrarEstado({ base: true, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, clima: { "1": { t: 27.8, h: 71 }, "2": { t: 31.4, h: 64 } } }, true);
   addMsg({ de: 2, t: 0, via: "L", x: "Llegué al cerro, ¿me copias?" });
   addMsg({ de: 1, t: 0, via: "L", x: "Fuerte y claro 👍" });
   addMsg({ de: 0, t: 0, via: "L", x: "🌐 Saludos desde la web" });
