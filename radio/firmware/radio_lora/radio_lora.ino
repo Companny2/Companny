@@ -58,6 +58,12 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define GAS_CALENTAR_MS 60000               // el sensor necesita ~1 min para calentarse
 #define HIST_N         120                  // historial para la gráfica: 120 puntos = 1 hora
 
+// Distancia aproximada a partir de la señal (RSSI), modelo log-distancia:
+//   distancia = 10 ^ ((RSSI_a_1m - RSSI) / (10 * N))
+#define RSSI_1M_LORA   -20                  // RSSI LoRa medido a 1 m (se puede calibrar)
+#define RSSI_1M_ESP    -40                  // RSSI ESP-NOW medido a 1 m (se puede calibrar)
+#define N_TRAYECTO     2.7                  // 2.0 campo abierto · 2.7 mixto · 3.5 con edificios
+
 // ---------------------------------------------------------------------------
 // 2) LIBRERÍAS
 // ---------------------------------------------------------------------------
@@ -150,6 +156,7 @@ String T(const char* s) { return String(TOPIC_PREFIX) + "/" + s; }
 #endif
 
 bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
+bool loraVivo() { return ultimoLora && millis() - ultimoLora < LORA_VIVO_MS; }
 
 Clima climaYo, climaOtro;
 bool climaVigente(const Clima& c) { return (c.okTH || c.okGas) && millis() - c.cuando < 180000; }  // 3 min
@@ -171,6 +178,23 @@ String histJson(const Hist& hs) {
   }
   return j + "]";
 }
+// RSSI promediado (suaviza saltos de la señal)
+float espProm = 0, loraProm = 0;
+void promediar(float& prom, int nuevo) { prom = (prom == 0) ? nuevo : prom * 0.7f + nuevo * 0.3f; }
+// Distancia aproximada en metros; -1 si no hay enlace. via: 'E' ESP-NOW, 'L' LoRa
+float distanciaM(char& via) {
+  float rssi, ref;
+  if (cerca())         { via = 'E'; rssi = espProm;  ref = RSSI_1M_ESP; }
+  else if (loraVivo()) { via = 'L'; rssi = loraProm; ref = RSSI_1M_LORA; }
+  else { via = '-'; return -1; }
+  float d = powf(10.0f, (ref - rssi) / (10.0f * N_TRAYECTO));
+  return d < 1 ? 1 : d;
+}
+String distJson() {
+  char via; float d = distanciaM(via);
+  if (d < 0) return "null";
+  return "{\"m\":" + String(d, 0) + ",\"via\":\"" + String(via) + "\"}";
+}
 String climaJson(const Clima& c) {
   if (!climaVigente(c)) return "null";
   String j = "{\"t\":" + (c.okTH ? String(c.t, 1) : String("null")) +
@@ -181,7 +205,6 @@ String climaJson(const Clima& c) {
 #if USAR_DHT
 DHT dht(DHT_PIN, DHT_TIPO);
 #endif
-bool loraVivo() { return ultimoLora && millis() - ultimoLora < LORA_VIVO_MS; }
 
 // ---------------------------------------------------------------------------
 // 5) LISTA DE MENSAJES
@@ -293,6 +316,7 @@ void loraLoop() {
       String resto = lineaLora.substring(ini + largo + 1);
       int p3 = resto.indexOf(',');
       loraRssi = resto.substring(0, p3).toInt();
+      promediar(loraProm, loraRssi);
       loraSnr  = resto.substring(p3 + 1).toInt();
       ultimoLora = millis();
       version++;
@@ -579,6 +603,7 @@ void apiEstado() {
   j += ",\"ocupado\":" + String(tx.activo ? "true" : "false");
   j += ",\"sos\":" + String(sosDe);
   j += ",\"clima\":{\"yo\":" + climaJson(climaYo) + ",\"otro\":" + climaJson(climaOtro) + "}";
+  j += ",\"dist\":" + distJson();
 #if ES_BASE
   j += ",\"web\":" + String(mqtt.connected() ? "true" : "false");
 #endif
@@ -708,7 +733,7 @@ void mqttLoop() {
     ultimo = millis();
     String j = "{\"base\":true,\"cerca\":{\"on\":" + String(cerca() ? "true" : "false") + ",\"rssi\":" + String(espRssi) +
                "},\"lora\":{\"on\":" + String(loraVivo() ? "true" : "false") + ",\"rssi\":" + String(loraRssi) +
-               ",\"snr\":" + String(loraSnr) + "},\"clima\":{\"" + String(EQUIPO) + "\":" + climaJson(climaYo) +
+               ",\"snr\":" + String(loraSnr) + "},\"dist\":" + distJson() + ",\"clima\":{\"" + String(EQUIPO) + "\":" + climaJson(climaYo) +
                ",\"" + String(OTRO) + "\":" + climaJson(climaOtro) + "}}";
     mqtt.publish(T("estado").c_str(), j.c_str(), true);
   }
@@ -855,6 +880,7 @@ void loop() {
     bool antes = cerca();
     ultimoEspNow = millis();
     espRssi = r.rssi;
+    promediar(espProm, r.rssi);
     if (!antes) version++;
     char c = r.d[0];
     if (c == 'f' || c == 'd' || c == 'a') procesarArchivo(r.d, r.len, r.rssi);

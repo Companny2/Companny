@@ -44,7 +44,7 @@ input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(
 </style></head><body>
 <header>
   <div class="top"><h1 id="tit">Radio</h1><button id="sosBtn">SOS</button></div>
-  <div class="chips"><span id="cCerca" class="chip">⚡ Cerca: —</span><span id="cLora" class="chip">📡 LoRa: —</span><span id="cWeb" class="chip" style="display:none">🌐 Web</span><span id="cClima" class="chip">🌡 Clima: —</span></div>
+  <div class="chips"><span id="cCerca" class="chip">⚡ Cerca: —</span><span id="cLora" class="chip">📡 LoRa: —</span><span id="cWeb" class="chip" style="display:none">🌐 Web</span><span id="cClima" class="chip">🌡 Clima: —</span><span id="cDist" class="chip">📏 Distancia: —</span></div>
 </header>
 <div id="graf"><div class="tabs"><button class="tab sel" id="gTog">📈 Gráfica</button><button class="tab sel" data-k="1">Temp.</button><button class="tab" data-k="2">Humedad</button><button class="tab" data-k="3">Gas</button><span class="ley"><b style="color:#3ba7ff">━</b> Aquí <b style="color:#ffb23b">━</b> Otro</span></div><svg id="gSvg"></svg></div>
 <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
@@ -97,6 +97,9 @@ function pintar(j) {
   const cl = j.clima || {}, fc = x => !x ? "sin datos" : [x.t != null ? x.t + "°C · " + x.h + "%" : "", x.g != null ? "gas " + x.g + "%" : ""].filter(Boolean).join(" · ");
   $("cClima").textContent = "🌡 Aquí: " + fc(cl.yo) + " | Equipo " + j.otro + ": " + fc(cl.otro);
   $("cClima").className = "chip" + (cl.yo || cl.otro ? " on" : "");
+  const fDist = m => m < 100 ? "~" + Math.round(m) + " m" : m < 1000 ? "~" + Math.round(m / 10) * 10 + " m" : "~" + (m / 1000).toFixed(1) + " km";
+  $("cDist").textContent = "📏 Distancia aprox.: " + (j.dist ? fDist(j.dist.m) + (j.dist.via == "E" ? " (⚡)" : " (📡)") : "sin enlace");
+  $("cDist").className = "chip" + (j.dist ? " on" : "");
   const medios = j.cerca.on && !j.ocupado;
   $("bFoto").disabled = $("bAudio").disabled = !medios;
 

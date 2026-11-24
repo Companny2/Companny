@@ -86,6 +86,11 @@
       <div class="clima"><span>Estación 2</span><b id="cl2">0 °C · 0 % · gas 0 %</b></div>
       <div class="sub" id="clSub">Sin datos de temperatura, humedad y gas</div>
     </section>
+    <section class="card">
+      <h2>📏 Distancia aprox. <span id="stDist" class="pill off">Sin enlace</span></h2>
+      <div class="big" id="distTxt">0<span> m</span></div>
+      <div class="sub" id="distSub">Estimada por la intensidad de la señal (RSSI) · sin datos</div>
+    </section>
   </div>
 
   <section class="card" id="grafCard">
@@ -140,7 +145,16 @@ function sinEnlace() {
   pill($("stLora"), false, "", "Sin enlace");
   $("loraRssi").innerHTML = "0<span> dBm</span>";
   $("loraSnr").textContent = "SNR 0 dB · sin datos";
+  mostrarDist(null);
   mostrarClima(null);
+}
+// Distancia aproximada entre estaciones (calculada por la base a partir del RSSI)
+function mostrarDist(d) {
+  pill($("stDist"), !!d, "Estimada", "Sin enlace", "on");
+  if (!d) { $("distTxt").innerHTML = "0<span> m</span>"; $("distSub").textContent = "Estimada por la intensidad de la señal (RSSI) · sin datos"; return; }
+  const m = d.m;
+  $("distTxt").innerHTML = m < 1000 ? "~" + (m < 100 ? Math.round(m) : Math.round(m / 10) * 10) + "<span> m</span>" : "~" + (m / 1000).toFixed(1) + "<span> km</span>";
+  $("distSub").textContent = "Estimada por RSSI vía " + (d.via == "E" ? "ESP-NOW" : "LoRa") + " · valor aproximado";
 }
 // --- historial y gráfica (se acumula mientras la página está abierta) ---
 let hist = [], gK = "t";
@@ -192,6 +206,7 @@ function mostrarEstado(e, vivo) {
   pill($("stLora"), e.lora.on, "Activo", "Sin señal", "lo");
   $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : 0) + "<span> dBm</span>";
   $("loraSnr").textContent = e.lora.on ? "SNR " + e.lora.snr + " dB · el mínimo útil en SF9 es -12 dB" : "SNR 0 dB · sin datos";
+  mostrarDist(e.dist);
   mostrarClima(e.clima, true);
 }
 setInterval(() => {   // la base publica su estado cada 10 s; 30 s sin datos = sin enlace
@@ -249,7 +264,7 @@ if (DEMO) {
   for (let i = 120; i > 0; i--) hist.push({ ms: Date.now() - i * 30000,
     "1": { t: +(27.5 + Math.sin(i / 20) * 1.2).toFixed(1), h: Math.round(70 + Math.cos(i / 25) * 4), g: Math.round(12 + Math.sin(i / 9) * 3) },
     "2": i < 70 ? { t: +(31 + Math.sin(i / 15) * 0.8).toFixed(1), h: Math.round(63 + Math.sin(i / 18) * 3), g: Math.round(17 + Math.cos(i / 7) * 2) } : null });
-  mostrarEstado({ base: true, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, clima: { "1": { t: 27.8, h: 71, g: 12 }, "2": { t: 31.4, h: 64, g: 18 } } }, true);
+  mostrarEstado({ base: true, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, dist: { m: 1850, via: "L" }, clima: { "1": { t: 27.8, h: 71, g: 12 }, "2": { t: 31.4, h: 64, g: 18 } } }, true);
   addMsg({ de: 2, t: 0, via: "L", x: "Llegué al cerro, ¿me copias?" });
   addMsg({ de: 1, t: 0, via: "L", x: "Fuerte y claro 👍" });
   addMsg({ de: 0, t: 0, via: "L", x: "🌐 Saludos desde la web" });
