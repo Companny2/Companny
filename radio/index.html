@@ -25,6 +25,8 @@
   .gbox h3{margin:0 0 2px;font-size:13px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;white-space:nowrap}
   .gbox h3 span{font-weight:600;color:var(--mu);font-size:12px}
   .gbox svg{width:100%;height:150px;display:block}
+  .gdiag{font-size:12px;color:var(--bad);margin:-4px 0 6px;line-height:1.35}
+  .gdiag:empty{display:none}
   .sens{width:100%;border-collapse:collapse;font-size:14px}
   .sens th{font-size:12px;color:var(--mu);font-weight:600;text-align:right;padding:2px 0 6px}
   .sens td{padding:4px 0;border-top:1px solid var(--line);white-space:nowrap}
@@ -116,7 +118,7 @@
     <div class="graf">
       <div class="gbox"><h3>🌡 Temperatura <span id="gv_t">—</span></h3><svg id="g_t"></svg></div>
       <div class="gbox"><h3>💧 Humedad <span id="gv_h">—</span></h3><svg id="g_h"></svg></div>
-      <div class="gbox"><h3>🧭 Presión <span id="gv_p">—</span></h3><svg id="g_p"></svg></div>
+      <div class="gbox"><h3>🧭 Presión <span id="gv_p">—</span></h3><svg id="g_p"></svg><div class="gdiag" id="gd_p"></div></div>
       <div class="gbox"><h3>💨 Gas / humo <span id="gv_g">—</span></h3><svg id="g_g"></svg></div>
       <div class="gbox"><h3>🔥 Llama <span id="gv_f">—</span></h3><svg id="g_f"></svg></div>
       <div class="gbox"><h3>🌊 Agua <span id="gv_w">—</span></h3><svg id="g_w"></svg></div>
@@ -180,7 +182,7 @@ function mostrarDist(d) {
   $("distSub").textContent = "Estimada por RSSI vía " + (d.via == "E" ? "ESP-NOW" : "LoRa") + " · valor aproximado";
 }
 // --- historial y gráfica (se acumula mientras la página está abierta) ---
-let hist = [];
+let hist = [], diagP = [];   // diagP: por qué no hay presión (lo informa la propia estación)
 const gUni = { t: "°C", h: "%", g: "%", f: "%", w: "%", p: "hPa" };
 const gDec = { t: 1, h: 0, g: 0, f: 0, w: 0, p: 1 };
 // rango mínimo visible de cada gráfica (evita que el ruido parezca un cambio grande)
@@ -192,16 +194,19 @@ function graficarUna(k) {
   const ser = [["1", "#1f7ae0"], ["2", "#e08600"]].map(([n, c]) => ({ n, c,
     p: hist.filter(q => q[n] && q[n][k] != null).map(q => [(q.ms - ahora) / 60000, q[n][k]]).filter(q => q[0] >= -60) }));
   const ys = ser.flatMap(s => s.p.map(q => q[1]));
+  // ventana de tiempo: se ajusta a los datos que hay (mín. 2 min, máx. 60 min) para ver cada lectura de 2 s
+  const S = Math.min(60, Math.max(2, -Math.min(0, ...ser.flatMap(s => s.p.map(q => q[0]))) * 1.05));
   const ult = ser.map(s => s.p.length ? "R" + s.n + ": " + s.p[s.p.length - 1][1].toFixed(gDec[k]) + " " + gUni[k] : "").filter(Boolean);
   $("gv_" + k).textContent = ult.length ? ult.join(" · ") : "sin datos";
+  if (k == "p") $("gd_p").textContent = ys.length ? "" : diagP.map(([n, t]) => "Radio " + n + ": " + t).join(" · ");
   if (!ys.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#5f6f7f" font-size="12" text-anchor="middle">0 datos · sin enlace o sin sensor</text>'; return; }
   let [lo, hi, min] = gRango[k];
   if (lo == null) { lo = Math.min(...ys); hi = Math.max(...ys); const m = (lo + hi) / 2; if (hi - lo < min) { lo = m - min / 2; hi = m + min / 2; } }
-  const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - T - B);
+  const xs = v => L + (v + S) / S * (W - L - R), yy = v => T + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - T - B);
   let h = "";
   for (let i = 0; i <= 2; i++) { const v = lo + (hi - lo) * i / 2, y = yy(v).toFixed(1);
     h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e1e6ed"/><text x="' + (L - 5) + '" y="' + (+y + 4) + '" fill="#5f6f7f" font-size="10" text-anchor="end">' + v.toFixed(gDec[k]) + '</text>'; }
-  [-60, -30, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 4) + '" fill="#5f6f7f" font-size="10" text-anchor="' + (m == -60 ? "start" : m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
+  [-S, -S / 2, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 4) + '" fill="#5f6f7f" font-size="10" text-anchor="' + (m == -S ? "start" : m ? "middle" : "end") + '">' + (m ? (S < 10 ? (+m.toFixed(1)) : Math.round(m)) + " min" : "ahora") + '</text>');
   ser.forEach(s => { if (!s.p.length) return;
     h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" points="' + s.p.map(q => xs(q[0]).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
     const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3" fill="' + s.c + '"/>'; });
@@ -212,7 +217,7 @@ window.addEventListener("resize", graficar);
 
 // Tarjeta de clima: 0 °C · 0 % cuando no hay datos de una estación
 function mostrarClima(c, vivo) {
-  if (vivo && c && (c["1"] || c["2"])) { hist.push({ ms: Date.now(), "1": c["1"], "2": c["2"] }); if (hist.length > 400) hist.shift(); }
+  if (vivo && c && (c["1"] || c["2"])) { hist.push({ ms: Date.now(), "1": c["1"], "2": c["2"] }); if (hist.length > 2000) hist.shift(); }
   graficar();
   c = c || {};
   for (const n of ["1", "2"]) {
@@ -223,7 +228,7 @@ function mostrarClima(c, vivo) {
   }
   const hay = !!(c["1"] || c["2"]);
   pill($("stClima"), hay, "Con datos", "Sin enlace", "on");
-  $("clSub").textContent = hay ? "Actualizado cada 30 s · alarma de fuego inmediata" : "Sin datos de los sensores";
+  $("clSub").textContent = hay ? "Actualizado cada 2 s · alarma de fuego inmediata" : "Sin datos de los sensores";
 }
 function mostrarEstado(e, vivo) {
   if (!vivo) return;                       // un dato guardado no indica enlace actual
@@ -241,9 +246,10 @@ function mostrarEstado(e, vivo) {
   $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : 0) + "<span> dBm</span>";
   $("loraSnr").textContent = e.lora.on ? "SNR " + e.lora.snr + " dB · el mínimo útil en SF9 es -12 dB" : "SNR 0 dB · sin datos";
   mostrarDist(e.dist);
+  diagP = Object.entries(e.diag || {}).filter(([n, d]) => d && d.p && !(e.clima && e.clima[n] && e.clima[n].p != null)).map(([n, d]) => [n, d.p]);
   mostrarClima(e.clima, true);
 }
-setInterval(() => {   // la base publica su estado cada 10 s; 30 s sin datos = sin enlace
+setInterval(() => {   // la base publica su estado cada 2 s; 30 s sin datos = sin enlace
   if (!DEMO && Date.now() - ultimoEstado > 30000) sinEnlace();
 }, 1000);
 

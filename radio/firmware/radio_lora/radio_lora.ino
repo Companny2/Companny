@@ -50,7 +50,9 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define USAR_DHT       1                    // 1 = esta estación tiene DHT11, 0 = no
 #define DHT_PIN        4                    // DAT del DHT11 -> D4 (GPIO4)
 #define DHT_TIPO       DHT11
-#define CLIMA_CADA_MS  30000                // enviar clima cada 30 s
+#define CLIMA_CADA_MS  2000                 // leer sensores (y actualizar la web) cada 2 s
+#define LORA_CLIMA_MS  4000                 // enviar los sensores a la otra radio por LoRa cada 4 s (2000 = cada 2 s)
+#define HIST_CADA_MS   30000                // un punto del historial del celular cada 30 s
 
 // Sensor de gas MQ (salida analógica AO con divisor de voltaje 5 V -> 3.3 V)
 #define USAR_GAS       1                    // 1 = esta estación tiene sensor MQ, 0 = no
@@ -98,8 +100,6 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #include "pagina.h"                        // la página del chat (HTML)
 #if USAR_PRESION
 #include <Wire.h>
-#include <Adafruit_BME280.h>                // librería "Adafruit BME280 Library"
-#include <Adafruit_BMP280.h>                // librería "Adafruit BMP280 Library"
 #endif
 #if USAR_DHT
 #include <DHT.h>                            // librería "DHT sensor library" (Adafruit)
@@ -194,6 +194,7 @@ Clima climaYo, climaOtro;
 bool climaVigente(const Clima& c) { return (c.okTH || c.okGas || c.okF || c.okW || c.okP) && millis() - c.cuando < 180000; }  // 3 min
 Hist histYo, histOtro;
 void agregarHist(Hist& hs, const Clima& c) {
+  if (hs.n && millis() - hs.p[(hs.ini + hs.n - 1) % HIST_N].ms < HIST_CADA_MS - 1000) return;   // 1 punto cada 30 s
   uint16_t i;
   if (hs.n < HIST_N) { i = (hs.ini + hs.n) % HIST_N; hs.n++; }
   else { i = hs.ini; hs.ini = (hs.ini + 1) % HIST_N; }      // lleno: reemplaza el más viejo
@@ -243,9 +244,122 @@ String climaJson(const Clima& c) {
 DHT dht(DHT_PIN, DHT_TIPO);
 #endif
 #if USAR_PRESION
-Adafruit_BME280 bme;
-Adafruit_BMP280 bmp;
-uint8_t tipoBaro = 0;                          // 0 = no encontrado, 1 = BME280, 2 = BMP280
+// ---- Sensor de presión: controlador propio (no depende de librerías ni del chip ID) ----
+// Funciona con BMP280 (ID 0x56/0x57/0x58), BME280 (0x60) y BMP180/BMP085 (0x55).
+// Prueba 0x76 y 0x77, y también SDA/SCL invertidos. Si no lo encuentra, reintenta cada 10 s.
+uint8_t tipoBaro = 0;                          // 0 = no encontrado, 1 = BME280, 2 = BMP280, 3 = BMP180
+uint8_t baroDir = 0;
+String baroDiag = "buscando sensor...";        // se muestra en la web si no hay datos de presión
+uint16_t bT1, bP1; int16_t bT2, bT3, bP2, bP3, bP4, bP5, bP6, bP7, bP8, bP9;
+uint8_t bH1, bH3; int16_t bH2, bH4, bH5; int8_t bH6;
+int16_t c180[11];                              // BMP180: AC1..AC6, B1, B2, MB, MC, MD
+bool i2cHay(uint8_t a) { Wire.beginTransmission(a); return Wire.endTransmission() == 0; }
+bool i2cLeer(uint8_t reg, uint8_t* b, uint8_t n) {
+  Wire.beginTransmission(baroDir); Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom(baroDir, n) != n) return false;
+  for (uint8_t i = 0; i < n; i++) b[i] = Wire.read();
+  return true;
+}
+void i2cEscribir(uint8_t reg, uint8_t v) { Wire.beginTransmission(baroDir); Wire.write(reg); Wire.write(v); Wire.endTransmission(); }
+bool baroIniciar() {
+  const uint8_t pines[2][2] = {{21, 22}, {22, 21}};
+  String vistos = "";
+  for (int k = 0; k < 2; k++) {
+    Wire.end(); Wire.begin(pines[k][0], pines[k][1]); Wire.setClock(100000);
+    for (uint8_t a = 0x76; a <= 0x77; a++) {
+      if (!i2cHay(a)) continue;
+      baroDir = a;
+      uint8_t id = 0, id180 = 0;
+      i2cLeer(0xD0, &id, 1);
+      Serial.printf("[I2C] 0x%02X responde (SDA=D%d SCL=D%d), chip ID = 0x%02X\n", a, pines[k][0], pines[k][1], id);
+      String inv = k ? " · SDA/SCL están cruzados, pero funciona" : "";
+      if (id == 0x55) {                          // BMP180 / BMP085
+        uint8_t b[22];
+        if (!i2cLeer(0xAA, b, 22)) continue;
+        for (int i = 0; i < 11; i++) c180[i] = (int16_t)(b[2 * i] << 8 | b[2 * i + 1]);
+        tipoBaro = 3; baroDiag = "BMP180 en 0x" + String(a, HEX) + inv;
+        return true;
+      }
+      if (id == 0x56 || id == 0x57 || id == 0x58 || id == 0x60) {
+        i2cEscribir(0xE0, 0xB6); delay(20);    // reinicio
+        uint8_t b[24];
+        if (!i2cLeer(0x88, b, 24)) continue;
+        auto u = [&](int i) { return (uint16_t)(b[i] | b[i + 1] << 8); };
+        bT1 = u(0); bT2 = u(2); bT3 = u(4); bP1 = u(6); bP2 = u(8); bP3 = u(10); bP4 = u(12);
+        bP5 = u(14); bP6 = u(16); bP7 = u(18); bP8 = u(20); bP9 = u(22);
+        if (id == 0x60) {
+          uint8_t h[7];
+          i2cLeer(0xA1, &bH1, 1); i2cLeer(0xE1, h, 7);
+          bH2 = (int16_t)(h[0] | h[1] << 8); bH3 = h[2];
+          bH4 = ((int8_t)h[3] << 4) | (h[4] & 0x0F); bH5 = ((int8_t)h[5] << 4) | (h[4] >> 4); bH6 = (int8_t)h[6];
+          i2cEscribir(0xF2, 0x01);               // humedad x1
+        }
+        i2cEscribir(0xF5, 0x08);                 // filtro x4
+        i2cEscribir(0xF4, 0x57);                 // temp x2, presión x16, modo normal
+        tipoBaro = id == 0x60 ? 1 : 2;
+        baroDiag = String(id == 0x60 ? "BME280" : "BMP280") + " en 0x" + String(a, HEX) + inv;
+        delay(50);
+        return true;
+      }
+      vistos += " chip 0x" + String(id, HEX) + " en 0x" + String(a, HEX) + " (no es BMP/BME)";
+    }
+    for (uint8_t a = 1; a < 127; a++) if (a != 0x76 && a != 0x77 && i2cHay(a)) vistos += " otro dispositivo en 0x" + String(a, HEX);
+  }
+  Wire.end(); Wire.begin(21, 22);
+  baroDiag = vistos.length() ? "no reconocido:" + vistos
+                             : "el sensor no responde: revisa VCC→3V3, GND→GND, SDA→D21, SCL→D22 y la soldadura de los pines";
+  return false;
+}
+// Lee temperatura (°C), presión (hPa) y humedad (% o NAN). Devuelve false si falla.
+bool baroLeer(float& t, float& p, float& h) {
+  h = NAN;
+  if (tipoBaro == 3) {                           // BMP180
+    uint8_t b[3];
+    i2cEscribir(0xF4, 0x2E); delay(6);
+    if (!i2cLeer(0xF6, b, 2)) return false;
+    int32_t UT = b[0] << 8 | b[1];
+    i2cEscribir(0xF4, 0x34); delay(6);
+    if (!i2cLeer(0xF6, b, 3)) return false;
+    int32_t UP = ((int32_t)b[0] << 16 | b[1] << 8 | b[2]) >> 8;
+    int32_t AC1 = c180[0], AC2 = c180[1], AC3 = c180[2], B1 = c180[6], B2 = c180[7], MC = c180[9], MD = c180[10];
+    uint32_t AC4 = (uint16_t)c180[3], AC5 = (uint16_t)c180[4], AC6 = (uint16_t)c180[5];
+    int32_t X1 = ((UT - (int32_t)AC6) * (int32_t)AC5) >> 15, X2 = (MC << 11) / (X1 + MD), B5 = X1 + X2;
+    t = ((B5 + 8) >> 4) / 10.0f;
+    int32_t B6 = B5 - 4000; X1 = (B2 * ((B6 * B6) >> 12)) >> 11; X2 = (AC2 * B6) >> 11;
+    int32_t X3 = X1 + X2, B3 = ((AC1 * 4 + X3) + 2) / 4;
+    X1 = (AC3 * B6) >> 13; X2 = (B1 * ((B6 * B6) >> 12)) >> 16; X3 = ((X1 + X2) + 2) >> 2;
+    uint32_t B4 = (AC4 * (uint32_t)(X3 + 32768)) >> 15, B7 = ((uint32_t)UP - B3) * 50000UL;
+    if (B4 == 0) return false;
+    int32_t pa = B7 < 0x80000000 ? (B7 * 2) / B4 : (B7 / B4) * 2;
+    X1 = (pa >> 8) * (pa >> 8); X1 = (X1 * 3038) >> 16; X2 = (-7357 * pa) >> 16;
+    pa += (X1 + X2 + 3791) >> 4;
+    p = pa / 100.0f;
+    return true;
+  }
+  uint8_t b[8];
+  if (!i2cLeer(0xF7, b, tipoBaro == 1 ? 8 : 6)) return false;
+  int32_t aP = (int32_t)b[0] << 12 | b[1] << 4 | b[2] >> 4, aT = (int32_t)b[3] << 12 | b[4] << 4 | b[5] >> 4;
+  if (aT == 0x80000 || aP == 0x80000) return false;           // sin medición
+  double v1 = (aT / 16384.0 - bT1 / 1024.0) * bT2, v2 = (aT / 131072.0 - bT1 / 8192.0);
+  v2 = v2 * v2 * bT3;
+  double tf = v1 + v2;
+  t = tf / 5120.0;
+  v1 = tf / 2.0 - 64000.0; v2 = v1 * v1 * bP6 / 32768.0; v2 += v1 * bP5 * 2.0; v2 = v2 / 4.0 + bP4 * 65536.0;
+  v1 = (bP3 * v1 * v1 / 524288.0 + bP2 * v1) / 524288.0; v1 = (1.0 + v1 / 32768.0) * bP1;
+  if (v1 == 0) return false;
+  double pa = 1048576.0 - aP; pa = (pa - v2 / 4096.0) * 6250.0 / v1;
+  v1 = bP9 * pa * pa / 2147483648.0; v2 = pa * bP8 / 32768.0; pa += (v1 + v2 + bP7) / 16.0;
+  p = pa / 100.0;
+  if (tipoBaro == 1) {
+    int32_t aH = b[6] << 8 | b[7];
+    double x = tf - 76800.0;
+    x = (aH - (bH4 * 64.0 + bH5 / 16384.0 * x)) * (bH2 / 65536.0 * (1.0 + bH6 / 67108864.0 * x * (1.0 + bH3 / 67108864.0 * x)));
+    x = x * (1.0 - bH1 * x / 524288.0);
+    h = constrain(x, 0, 100);
+  }
+  return true;
+}
 #endif
 
 // ---------------------------------------------------------------------------
@@ -858,12 +972,16 @@ void mqttLoop() {
     }
   }
   static uint32_t ultimo = 0;
-  if (millis() - ultimo > 10000) {
+  if (millis() - ultimo > 2000) {
     ultimo = millis();
     String j = "{\"base\":true,\"equipo\":" + String(EQUIPO) + ",\"otro\":" + String(OTRO) + ",\"cerca\":{\"on\":" + String(cerca() ? "true" : "false") + ",\"rssi\":" + String(espRssi) +
                "},\"lora\":{\"on\":" + String(loraVivo() ? "true" : "false") + ",\"rssi\":" + String(loraRssi) +
                ",\"snr\":" + String(loraSnr) + "},\"dist\":" + distJson() + ",\"clima\":{\"" + String(EQUIPO) + "\":" + climaJson(climaYo) +
-               ",\"" + String(OTRO) + "\":" + climaJson(climaOtro) + "}}";
+               ",\"" + String(OTRO) + "\":" + climaJson(climaOtro) + "}"
+#if USAR_PRESION
+               + ",\"diag\":{\"" + String(EQUIPO) + "\":{\"p\":\"" + baroDiag + "\"}}"
+#endif
+               + "}";
     mqtt.publish(T("estado").c_str(), j.c_str(), true);
   }
 }
@@ -955,9 +1073,10 @@ float leerGas() {
   if (millis() < GAS_CALENTAR_MS) return 0;       // calentando: todavía no es fiable
   if (gasBase < 0 || r < gasBase) gasBase = r;    // primera lectura o el aire está más limpio
   float g = (r - gasBase) * 100.0f / max(4095.0f - gasBase, 400.0f);
-  if (g < 5) gasBase += (r - gasBase) * 0.02f;    // seguimiento lento del aire limpio
+  if (g < 5) gasBase += (r - gasBase) * 0.0015f;  // seguimiento lento del aire limpio (lecturas cada 2 s)
   if (g < 2) g = 0;                               // ruido del ADC
-  Serial.printf("[GAS] crudo %.0f  base %.0f  ->  %.0f %%\n", r, gasBase, g);
+  static uint32_t ultLog = 0;
+  if (millis() - ultLog > 30000) { ultLog = millis(); Serial.printf("[GAS] crudo %.0f  base %.0f  ->  %.0f %%\n", r, gasBase, g); }
   return constrain(g, 0, 100);
 }
 
@@ -1046,7 +1165,8 @@ void manejarClima() {
   float t = dht.readTemperature();
   float h = dht.readHumidity();
   if (isnan(t) || isnan(h)) {
-    Serial.println("!! DHT11 sin lectura: revisa VCC->3V3, DAT->D4 (GPIO4) y GND");
+    static uint32_t ultAviso = 0;
+    if (millis() - ultAviso > 15000) { ultAviso = millis(); Serial.println("!! DHT11 sin lectura: revisa VCC->3V3, DAT->D4 (GPIO4) y GND"); }
     climaYo.okTH = false;
   } else {
     t += TEMP_AJUSTE;
@@ -1061,7 +1181,8 @@ void manejarClima() {
   static bool alarmaGas = false;
   if (millis() < GAS_CALENTAR_MS) {
     climaYo.okGas = false; gs = "x";              // sin dato hasta que se caliente
-    Serial.println("[GAS] calentando el sensor (1 min)...");
+    static uint32_t ultAviso = 0;
+    if (millis() - ultAviso > 15000) { ultAviso = millis(); Serial.println("[GAS] calentando el sensor (1 min)..."); }
   } else if (!alarmaGas && g >= GAS_ALARMA) {
     alarmaGas = true;
     enviarMensaje(SOS, "SOS: gas detectado (" + gs + " %)");
@@ -1075,19 +1196,26 @@ void manejarClima() {
   fs = String(f, 0) + (climaYo.fuego ? "!" : "");
 #endif
 #if USAR_PRESION
-  if (tipoBaro) {
-    float p = (tipoBaro == 1 ? bme.readPressure() : bmp.readPressure()) / 100.0f;   // Pa -> hPa
-    if (p > 300 && p < 1200) { climaYo.okP = true; climaYo.p = p; ps = String(p, 1); }
-    // La temperatura del BME/BMP280 (±1 °C) es más exacta que la del DHT11 (±2 °C): se usa esa.
-    // La humedad sigue saliendo del DHT11 (o del BME280 si no hay DHT11).
-    float t = (tipoBaro == 1 ? bme.readTemperature() : bmp.readTemperature()) + TEMP_AJUSTE;
-    float h = tipoBaro == 1 ? bme.readHumidity() : NAN;
-    if (!isnan(t) && t > -20 && t < 70) {
-      climaYo.t = t; ts = String(t, 1);
-      if (!climaYo.okTH) { climaYo.okTH = true; climaYo.h = isnan(h) ? 0 : h; hs = isnan(h) ? "0" : String(h, 0); }
+  static uint32_t reintento = 0;
+  static uint8_t fallos = 0;
+  if (!tipoBaro && millis() - reintento > 10000) {   // sin sensor: lo vuelve a buscar cada 10 s
+    reintento = millis();
+    if (baroIniciar()) Serial.println("[PRESION] " + baroDiag);
+    else Serial.println("!! Presión: " + baroDiag);
+  }
+  float bt, bp, bh;
+  if (tipoBaro && baroLeer(bt, bp, bh) && bp > 300 && bp < 1200) {
+    fallos = 0;
+    climaYo.okP = true; climaYo.p = bp; ps = String(bp, 1);
+    // La temperatura del BMP/BME (±1 °C) es más exacta que la del DHT11 (±2 °C): se usa esa.
+    bt += TEMP_AJUSTE;
+    if (bt > -20 && bt < 70) {
+      climaYo.t = bt; ts = String(bt, 1);
+      if (!climaYo.okTH) { climaYo.okTH = true; climaYo.h = isnan(bh) ? 0 : bh; hs = isnan(bh) ? "0" : String(bh, 0); }
     }
   } else {
-    Serial.println("!! Presión: no hay BME/BMP280 (mira el mensaje [I2C] al encender)");
+    climaYo.okP = false;
+    if (tipoBaro && ++fallos >= 5) { tipoBaro = 0; baroDiag = "se perdió la conexión con el sensor"; Serial.println("!! Presión: " + baroDiag); }
   }
 #endif
 #if USAR_AGUA
@@ -1106,8 +1234,13 @@ void manejarClima() {
   climaYo.cuando = millis();
   agregarHist(histYo, climaYo);
   version++;
+  static uint32_t ultLora = 0, ultLog = 0;
+  bool alarma = climaYo.fuego;
+  if (millis() - ultLog > 10000) { ultLog = millis();
   Serial.printf("[CLIMA] %s C  %s %%  gas %s %%  llama %s  agua %s %%  %s hPa\n", ts.c_str(), hs.c_str(), gs.c_str(),
-                fs.c_str(), ws.c_str(), ps.c_str());
+                fs.c_str(), ws.c_str(), ps.c_str()); }
+  if (!alarma && millis() - ultLora < LORA_CLIMA_MS - 100) return;   // a la otra radio: cada 4 s
+  ultLora = millis();
   String trama = "C," + String(EQUIPO) + "," + ts + "," + hs + "," + gs + "," + fs + "," + ws + "," + ps;
   if ((PREFERIR_LORA && loraOk) || !cerca()) loraEnviar(trama);   // sensores: por LoRa
   else espEnviarTexto(trama);
@@ -1137,22 +1270,8 @@ void setup() {
 #endif
 #if USAR_PRESION
   Wire.begin(21, 22);                             // SDA = D21, SCL = D22
-  // Busca el sensor en 0x76 y 0x77 y lee su chip ID: 0x60 = BME280, 0x56/0x57/0x58 = BMP280
-  for (uint8_t dir = 0x76; dir <= 0x77 && !tipoBaro; dir++) {
-    Wire.beginTransmission(dir);
-    if (Wire.endTransmission() != 0) { Serial.printf("[I2C] 0x%02X: nada\n", dir); continue; }
-    Wire.beginTransmission(dir); Wire.write(0xD0); Wire.endTransmission();
-    uint8_t id = Wire.requestFrom(dir, (uint8_t)1) == 1 ? Wire.read() : 0;
-    Serial.printf("[I2C] 0x%02X responde, chip ID = 0x%02X\n", dir, id);
-    if (id == 0x60 && bme.begin(dir)) tipoBaro = 1;
-    else if ((id == 0x56 || id == 0x57 || id == 0x58) && bmp.begin(dir, id)) tipoBaro = 2;
-  }
-  if (!tipoBaro) {                                // ¿hay algo más en el bus? (ayuda a diagnosticar)
-    for (uint8_t a = 1; a < 127; a++) { Wire.beginTransmission(a); if (Wire.endTransmission() == 0) Serial.printf("[I2C] dispositivo en 0x%02X\n", a); }
-  }
-  Serial.println(tipoBaro == 1 ? "Sensor BME280 listo (presión, temperatura, humedad)" :
-                 tipoBaro == 2 ? "Sensor BMP280 listo (presión, temperatura)" :
-                 "!! No se encontró el BME280/BMP280: revisa VIN->3V3, SDA->D21, SCL->D22");
+  if (baroIniciar()) Serial.println("Sensor de presión listo: " + baroDiag);
+  else Serial.println("!! Presión: " + baroDiag);
 #endif
 #if USAR_AGUA
   pinMode(AGUA_VCC, OUTPUT);
