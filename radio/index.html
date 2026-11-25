@@ -7,21 +7,21 @@
 <title>Radio LoRa</title>
 <script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"></script>
 <style>
-  :root{--bg:#0f1720;--card:#17212c;--line:#253241;--tx:#e8eef4;--mu:#8a9bab;--yo:#1e4a6e;--ok:#3fd17a;--bad:#ff5d5d;--lo:#ffb23b;--az:#3ba7ff}
+  :root{--bg:#ffffff;--card:#f5f7fa;--line:#e1e6ed;--tx:#1d2833;--mu:#5f6f7f;--yo:#dcecff;--ok:#18a058;--bad:#d93838;--lo:#e08600;--az:#1f7ae0}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border-bottom:1px solid var(--line)}
   h1{font-size:19px;margin:0}
   h1 small{display:block;font-size:12px;color:var(--mu);font-weight:400}
   .pill{font-size:12px;padding:5px 10px;border-radius:99px;background:var(--line);color:var(--mu);white-space:nowrap}
-  .pill.on{background:rgba(63,209,122,.15);color:var(--ok)}
-  .pill.lo{background:rgba(255,178,59,.15);color:var(--lo)}
-  .pill.off{background:rgba(255,93,93,.15);color:var(--bad)}
+  .pill.on{background:rgba(24,160,88,.15);color:var(--ok)}
+  .pill.lo{background:rgba(224,134,0,.15);color:var(--lo)}
+  .pill.off{background:rgba(217,56,56,.15);color:var(--bad)}
   main{max-width:900px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
   .grid{min-width:0}
   #grafCard .tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
   #grafCard .tab{font-size:12px;padding:5px 11px;border-radius:99px;background:var(--line);color:var(--mu);border:0;font-weight:600}
-  #grafCard .tab.sel{background:var(--az);color:#04121f}
+  #grafCard .tab.sel{background:var(--az);color:#ffffff}
   #grafCard .ley{margin-left:auto;font-size:12px;color:var(--mu)}
   #gSvg{width:100%;height:220px;display:block}
   .clima{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--mu);margin:4px 0}
@@ -34,7 +34,7 @@
   .big{font-size:30px;font-weight:700;line-height:1.1}
   .big span{font-size:15px;color:var(--mu);font-weight:400}
   .sub{font-size:13px;color:var(--mu);margin-top:6px}
-  #aviso{padding:12px 16px;font-size:14px;color:var(--mu);border-color:rgba(255,178,59,.4);background:rgba(255,178,59,.06)}
+  #aviso{padding:12px 16px;font-size:14px;color:var(--mu);border-color:rgba(224,134,0,.4);background:rgba(224,134,0,.06)}
   #aviso b{color:var(--lo)}
   #alerta{display:none;background:var(--bad);color:#fff;border-radius:14px;padding:14px 16px;font-weight:700;align-items:center;justify-content:space-between;animation:p 1s infinite}
   #alerta button{background:#fff;color:var(--bad);border:0;border-radius:8px;padding:6px 12px;font-weight:700}
@@ -45,12 +45,12 @@
   .m.web{align-self:flex-end;background:var(--yo)}
   .m.r1{border-left:3px solid var(--az)}
   .m.r2{border-left:3px solid var(--lo)}
-  .m.sos{background:#5c1a1a;border:1px solid var(--bad)}
+  .m.sos{background:#fdecec;border:1px solid var(--bad)}
   .vacio{color:var(--mu);margin:auto;font-size:14px}
   form{display:flex;gap:8px}
   input{flex:1;min-width:0;width:0;background:var(--bg);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font:inherit}
   button{border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}
-  #env{background:var(--az);color:#04121f}
+  #env{background:var(--az);color:#ffffff}
   #sos{background:var(--bad);color:#fff}
   details{font-size:13px;color:var(--mu)}
   details input{margin-top:6px;width:100%}
@@ -63,7 +63,7 @@
 </header>
 
 <main>
-  <div id="bloqueo" class="card" style="display:none;border-color:rgba(255,93,93,.5);background:rgba(255,93,93,.08);font-size:14px;padding:12px 16px">⚠️ <b style="color:var(--bad)">Este navegador no logra conectarse al servidor de datos.</b> Suele deberse a un bloqueador: en <b>Brave</b> desactiva los <i>Shields</i> (ícono del león) para este sitio; si usas una extensión bloqueadora de anuncios, pausa la extensión aquí. También puedes abrir la página en Chrome o en el celular.</div>
+  <div id="bloqueo" class="card" style="display:none;border-color:rgba(217,56,56,.5);background:rgba(217,56,56,.08);font-size:14px;padding:12px 16px">⚠️ <b style="color:var(--bad)">Este navegador no logra conectarse al servidor de datos.</b> Suele deberse a un bloqueador: en <b>Brave</b> desactiva los <i>Shields</i> (ícono del león) para este sitio; si usas una extensión bloqueadora de anuncios, pausa la extensión aquí. También puedes abrir la página en Chrome o en el celular.</div>
   <div id="aviso" class="card">ℹ️ <b>Sin datos por falta de enlace.</b> Los valores se muestran en 0 hasta que la estación base se conecte y envíe información.</div>
   <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 
@@ -99,7 +99,7 @@
   <section class="card" id="grafCard">
     <h2>📈 Historial (última hora)</h2>
     <div class="tabs"><button class="tab sel" data-k="t">Temperatura</button><button class="tab" data-k="h">Humedad</button><button class="tab" data-k="g">Gas</button>
-      <span class="ley"><b style="color:#3ba7ff">━</b> Estación 1 &nbsp;<b style="color:#ffb23b">━</b> Estación 2</span></div>
+      <span class="ley"><b style="color:#1f7ae0">━</b> Estación 1 &nbsp;<b style="color:#e08600">━</b> Estación 2</span></div>
     <svg id="gSvg"></svg>
   </section>
 
@@ -165,20 +165,20 @@ const gUni = { t: "°C", h: "%", g: "%" };
 function graficar() {
   const svg = $("gSvg"), W = svg.clientWidth || 600, H = 220, L = 40, R = 10, T = 10, B = 22, ahora = Date.now();
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-  const ser = [["1", "#3ba7ff"], ["2", "#ffb23b"]].map(([n, c]) => ({ c,
+  const ser = [["1", "#1f7ae0"], ["2", "#e08600"]].map(([n, c]) => ({ c,
     p: hist.filter(q => q[n] && q[n][gK] != null).map(q => [(q.ms - ahora) / 60000, q[n][gK]]).filter(q => q[0] >= -60) }));
   const ys = ser.flatMap(s => s.p.map(q => q[1]));
-  if (!ys.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#8a9bab" font-size="13" text-anchor="middle">0 datos · sin enlace con las estaciones</text>'; return; }
+  if (!ys.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#5f6f7f" font-size="13" text-anchor="middle">0 datos · sin enlace con las estaciones</text>'; return; }
   let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 2) { lo -= 1; hi += 1; }
   const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - v) / (hi - lo) * (H - T - B);
   let h = "";
   for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3, y = yy(v).toFixed(1);
-    h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#253241"/><text x="' + (L - 6) + '" y="' + (+y + 4) + '" fill="#8a9bab" font-size="11" text-anchor="end">' + v.toFixed(gK == "t" ? 1 : 0) + '</text>'; }
-  [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 5) + '" fill="#8a9bab" font-size="11" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
+    h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e1e6ed"/><text x="' + (L - 6) + '" y="' + (+y + 4) + '" fill="#5f6f7f" font-size="11" text-anchor="end">' + v.toFixed(gK == "t" ? 1 : 0) + '</text>'; }
+  [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 5) + '" fill="#5f6f7f" font-size="11" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
   ser.forEach(s => { if (!s.p.length) return;
     h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2.2" points="' + s.p.map(q => xs(q[0]).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
     const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3.5" fill="' + s.c + '"/>'; });
-  h += '<text x="' + (W - R) + '" y="' + (T + 12) + '" fill="#8a9bab" font-size="11" text-anchor="end">' + gUni[gK] + '</text>';
+  h += '<text x="' + (W - R) + '" y="' + (T + 12) + '" fill="#5f6f7f" font-size="11" text-anchor="end">' + gUni[gK] + '</text>';
   svg.innerHTML = h;
 }
 document.querySelectorAll("#grafCard .tab").forEach(b => b.onclick = () => {

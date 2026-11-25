@@ -6,7 +6,7 @@ const char PAGINA[] PROGMEM = R"PAGINA(
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>Radio</title>
 <style>
-:root{--bg:#0f1720;--card:#17212c;--line:#253241;--tx:#e8eef4;--mu:#8a9bab;--yo:#1e4a6e;--ok:#3fd17a;--bad:#ff5d5d;--lo:#ffb23b}
+:root{--bg:#ffffff;--card:#f5f7fa;--line:#e1e6ed;--tx:#1d2833;--mu:#5f6f7f;--yo:#dcecff;--ok:#18a058;--bad:#d93838;--lo:#e08600}
 *{box-sizing:border-box}html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,Roboto,sans-serif;display:flex;flex-direction:column}
 header{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
@@ -14,8 +14,8 @@ header{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-d
 h1{font-size:17px;margin:0}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{font-size:12px;padding:4px 9px;border-radius:99px;background:var(--line);color:var(--mu)}
-.chip.on{background:rgba(63,209,122,.15);color:var(--ok)}
-.chip.lo{background:rgba(255,178,59,.15);color:var(--lo)}
+.chip.on{background:rgba(24,160,88,.15);color:var(--ok)}
+.chip.lo{background:rgba(224,134,0,.15);color:var(--lo)}
 #sosBtn{background:var(--bad);color:#fff;border:0;border-radius:10px;padding:7px 12px;font-weight:700}
 #alerta{display:none;background:var(--bad);color:#fff;padding:12px;font-weight:700;justify-content:space-between;align-items:center;animation:p 1s infinite}
 #alerta button{background:#fff;color:var(--bad);border:0;border-radius:8px;padding:6px 12px;font-weight:700}
@@ -23,7 +23,7 @@ h1{font-size:17px;margin:0}
 #lista{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
 .m{max-width:82%;padding:8px 11px;border-radius:14px;background:var(--card);word-wrap:break-word}
 .m.yo{align-self:flex-end;background:var(--yo)}
-.m.sos{background:#5c1a1a;border:1px solid var(--bad)}
+.m.sos{background:#fdecec;border:1px solid var(--bad)}
 .m small{display:block;font-size:11px;color:var(--mu);margin-top:3px}
 .m img{max-width:100%;border-radius:8px;display:block}
 .m audio{width:230px;max-width:100%}
@@ -32,11 +32,11 @@ form{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
 input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:11px;font:inherit}
 .b{background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:0 12px;font-size:18px}
 .b:disabled{opacity:.35}
-#env{background:#3ba7ff;color:#04121f;border:0;font-weight:700;font-size:15px}
+#env{background:#1f7ae0;color:#ffffff;border:0;font-weight:700;font-size:15px}
 #graf{border-bottom:1px solid var(--line);padding:8px 12px}
 #graf .tabs{display:flex;gap:6px;align-items:center}
 #graf .tab{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--line);color:var(--mu);border:0}
-#graf .tab.sel{background:#3ba7ff;color:#04121f;font-weight:700}
+#graf .tab.sel{background:#1f7ae0;color:#ffffff;font-weight:700}
 #graf .ley{margin-left:auto;font-size:11px;color:var(--mu)}
 #graf svg{width:100%;height:150px;display:block;margin-top:6px}
 #graf.cerrado svg,#graf.cerrado .tab:not(#gTog){display:none}
@@ -48,18 +48,18 @@ input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(
 .op{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:14px;padding:16px;margin-bottom:12px;font:inherit}
 .op b{font-size:17px;display:block;margin-bottom:4px}
 .op span{color:var(--mu);font-size:14px}
-.op.act{border-color:#3ba7ff;box-shadow:0 0 0 1px #3ba7ff}
-.op .tag{float:right;font-size:11px;font-weight:700;color:#04121f;background:#3ba7ff;border-radius:99px;padding:2px 8px}
+.op.act{border-color:#1f7ae0;box-shadow:0 0 0 1px #1f7ae0}
+.op .tag{float:right;font-size:11px;font-weight:700;color:#ffffff;background:#1f7ae0;border-radius:99px;padding:2px 8px}
 .nota{font-size:13px;color:var(--mu);margin-top:6px}
-.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;margin-top:10px;background:#3ba7ff;color:#04121f}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;margin-top:10px;background:#1f7ae0;color:#ffffff}
 .btn.sec{background:var(--card);color:var(--tx);border:1px solid var(--line)}
-.volver{background:none;border:0;color:#3ba7ff;font:inherit;padding:0;margin-bottom:12px}
+.volver{background:none;border:0;color:#1f7ae0;font:inherit;padding:0;margin-bottom:12px}
 .estado{background:var(--card);border-radius:12px;padding:12px;font-size:14px;margin-bottom:12px}
 .estado.ok{border:1px solid var(--ok)} .estado.mal{border:1px solid var(--bad)}
 .red{display:flex;justify-content:space-between;width:100%;background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:12px;margin-bottom:6px;font:inherit}
-.red.sel{border-color:#3ba7ff}
+.red.sel{border-color:#1f7ae0}
 #clave{width:100%;background:var(--card);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:12px;font:inherit;margin-top:6px}
-#aviso{display:none;position:fixed;left:12px;right:12px;bottom:70px;background:#000c;padding:10px 12px;border-radius:10px;font-size:14px}
+#aviso{display:none;position:fixed;left:12px;right:12px;bottom:70px;background:#1d2833e6;padding:10px 12px;border-radius:10px;font-size:14px}
 </style></head><body>
 <header>
   <div class="top"><div style="display:flex;align-items:center"><button id="menuBtn" title="Menú">☰</button><h1 id="tit">Radio</h1></div><button id="sosBtn">SOS</button></div>
@@ -87,7 +87,7 @@ input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(
     <div class="nota">Al conectarse, la red Radio puede cambiar de canal: si el celular se desconecta, vuelve a conectarlo a la red Radio y abre 192.168.4.1.</div>
   </div>
 </div>
-<div id="graf"><div class="tabs"><button class="tab sel" id="gTog">📈 Gráfica</button><button class="tab sel" data-k="1">Temp.</button><button class="tab" data-k="2">Humedad</button><button class="tab" data-k="3">Gas</button><span class="ley"><b style="color:#3ba7ff">━</b> Aquí <b style="color:#ffb23b">━</b> Otro</span></div><svg id="gSvg"></svg></div>
+<div id="graf"><div class="tabs"><button class="tab sel" id="gTog">📈 Gráfica</button><button class="tab sel" data-k="1">Temp.</button><button class="tab" data-k="2">Humedad</button><button class="tab" data-k="3">Gas</button><span class="ley"><b style="color:#1f7ae0">━</b> Aquí <b style="color:#e08600">━</b> Otro</span></div><svg id="gSvg"></svg></div>
 <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 <div id="lista"><div class="vacio" id="vacio">Aún no hay mensajes.<br>Escribe abajo para empezar.</div></div>
 <div id="aviso"></div>
@@ -216,20 +216,20 @@ function graficar() {
   const svg = $("gSvg"), W = svg.clientWidth || 360, H = 150, L = 30, R = 8, T = 8, B = 18;
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
   if (!gDatos) { svg.innerHTML = ""; return; }
-  const ser = [["yo", "#3ba7ff"], ["otro", "#ffb23b"]].map(([n, c]) => ({ c, p: (gDatos[n] || []).filter(q => q[gK] != null).map(q => [-q[0] / 60, q[gK]]) }));
+  const ser = [["yo", "#1f7ae0"], ["otro", "#e08600"]].map(([n, c]) => ({ c, p: (gDatos[n] || []).filter(q => q[gK] != null).map(q => [-q[0] / 60, q[gK]]) }));
   const ys = ser.flatMap(s => s.p.map(q => q[1]));
-  let h = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#8a9bab" font-size="12" text-anchor="middle">Sin datos todavía</text>';
+  let h = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#5f6f7f" font-size="12" text-anchor="middle">Sin datos todavía</text>';
   if (ys.length) {
     let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 2) { lo -= 1; hi += 1; }
     const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - v) / (hi - lo) * (H - T - B);
     h = "";
     for (let i = 0; i <= 2; i++) { const v = lo + (hi - lo) * i / 2, y = yy(v).toFixed(1);
-      h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#253241"/><text x="' + (L - 4) + '" y="' + (+y + 4) + '" fill="#8a9bab" font-size="10" text-anchor="end">' + v.toFixed(gK == 1 ? 1 : 0) + '</text>'; }
-    [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 4) + '" fill="#8a9bab" font-size="10" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
+      h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e1e6ed"/><text x="' + (L - 4) + '" y="' + (+y + 4) + '" fill="#5f6f7f" font-size="10" text-anchor="end">' + v.toFixed(gK == 1 ? 1 : 0) + '</text>'; }
+    [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 4) + '" fill="#5f6f7f" font-size="10" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
     ser.forEach(s => { if (!s.p.length) return;
       h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2" points="' + s.p.map(q => xs(Math.max(q[0], -60)).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
       const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3" fill="' + s.c + '"/>'; });
-    h += '<text x="' + (W - R) + '" y="' + (T + 10) + '" fill="#8a9bab" font-size="10" text-anchor="end">' + gUni[gK] + '</text>';
+    h += '<text x="' + (W - R) + '" y="' + (T + 10) + '" fill="#5f6f7f" font-size="10" text-anchor="end">' + gUni[gK] + '</text>';
   }
   svg.innerHTML = h;
 }
@@ -285,7 +285,7 @@ async function escanear(nuevo) {
     r.redes.sort((a, b) => b.r - a.r).forEach(n => {
       const b = document.createElement("button"); b.className = "red" + (n.s == redSel ? " sel" : "");
       const izq = document.createElement("span"); izq.textContent = (n.seg ? "🔒 " : "") + n.s;
-      const der = document.createElement("span"); der.textContent = n.r > -60 ? "▂▄▆█" : n.r > -72 ? "▂▄▆" : n.r > -82 ? "▂▄" : "▂"; der.style.color = "#8a9bab";
+      const der = document.createElement("span"); der.textContent = n.r > -60 ? "▂▄▆█" : n.r > -72 ? "▂▄▆" : n.r > -82 ? "▂▄" : "▂"; der.style.color = "#5f6f7f";
       b.append(izq, der);
       b.onclick = () => { redSel = n.s; box.querySelectorAll(".red").forEach(x => x.classList.toggle("sel", x == b));
         $("claveBox").style.display = ""; $("clave").value = ""; $("clave").style.display = n.seg ? "" : "none"; if (n.seg) $("clave").focus(); };
