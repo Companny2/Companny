@@ -30,7 +30,7 @@ const char* CLAVE_AP = "radio1234";        // mínimo 8 caracteres
 #define PREFERIR_LORA 1                    // 1 = texto, SOS y sensores SIEMPRE por LoRa (ESP-NOW solo fotos/voz y respaldo)
 
 // Modo CON internet (la red WiFi se elige desde el menú del celular)
-const char* MQTT_HOST    = "broker.hivemq.com";
+const char* MQTT_HOST    = "broker.emqx.io";   // servidor MQTT público (funciona también en Brave)
 const int   MQTT_PORT    = 1883;
 const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único (igual en la web)
 
