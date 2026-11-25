@@ -63,6 +63,7 @@
 </header>
 
 <main>
+  <div id="bloqueo" class="card" style="display:none;border-color:rgba(255,93,93,.5);background:rgba(255,93,93,.08);font-size:14px;padding:12px 16px">⚠️ <b style="color:var(--bad)">Este navegador no logra conectarse al servidor de datos.</b> Suele deberse a un bloqueador: en <b>Brave</b> desactiva los <i>Shields</i> (ícono del león) para este sitio; si usas una extensión bloqueadora de anuncios, pausa la extensión aquí. También puedes abrir la página en Chrome o en el celular.</div>
   <div id="aviso" class="card">ℹ️ <b>Sin datos por falta de enlace.</b> Los valores se muestran en 0 hasta que la estación base se conecte y envíe información.</div>
   <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 
@@ -254,8 +255,11 @@ $("visto").onclick = () => $("alerta").style.display = "none";
 let client = null;
 if (!DEMO) {
   client = mqtt.connect(BROKER, { clientId: "web-" + Math.random().toString(16).slice(2, 10) });
-  client.on("connect", () => { pill($("conn"), true, "Conectado", ""); client.subscribe(prefix + "/#"); });
+  let conectadoAlgunaVez = false;
+  client.on("connect", () => { conectadoAlgunaVez = true; $("bloqueo").style.display = "none"; pill($("conn"), true, "Conectado", ""); client.subscribe(prefix + "/#"); });
   client.on("close", () => pill($("conn"), false, "", "Desconectado"));
+  // Si en 12 s no conecta, casi siempre es un bloqueador del navegador: avisarlo
+  setTimeout(() => { if (!conectadoAlgunaVez) $("bloqueo").style.display = ""; }, 12000);
   client.on("message", (topic, payload, packet) => {
     const sub = topic.slice(prefix.length + 1);
     try {
