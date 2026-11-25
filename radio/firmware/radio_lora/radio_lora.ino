@@ -44,7 +44,10 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define LORA_CLAVE   "4F7A21C9"            // cifrado: 8 dígitos hex, igual en ambas
 
 #define LED_PIN   2                        // LED azul de la placa
-#define BOTON_SOS 0                         // botón BOOT: pulsación de 2 s = SOS
+#define BOTON_SOS 0                         // botón BOOT: pulsación de 2 s = SOS; toque corto = callar la alarma
+#define USAR_BUZZER    0                    // 1 = esta estación tiene buzzer (+ -> D25, - -> GND)
+#define BUZZER_PIN     25                   // D25 (GPIO25)
+#define BUZZER_PASIVO  0                    // 0 = buzzer ACTIVO (suena con solo darle voltaje); 1 = pasivo (necesita tono)
 
 // Sensor de temperatura y humedad DHT11
 #define USAR_DHT       1                    // 1 = esta estación tiene DHT11, 0 = no
@@ -179,6 +182,36 @@ String lineaLora;
 WiFiClient net;
 PubSubClient mqtt(net);
 String T(const char* s) { return String(TOPIC_PREFIX) + "/" + s; }
+// ---- Buzzer: SOS recibido = pitido intermitente 30 s (toque corto en BOOT lo calla);
+// mensaje recibido = 1 pitido; SOS enviado = 3 pitidos ----
+uint32_t buzAlarmaHasta = 0;   // hasta cuándo suena la alarma intermitente
+uint8_t buzPitidos = 0;        // pitidos cortos pendientes
+void buzzer(bool on) {
+#if USAR_BUZZER
+#if BUZZER_PASIVO
+  ledcWriteTone(BUZZER_PIN, on ? 2700 : 0);
+#else
+  digitalWrite(BUZZER_PIN, on ? HIGH : LOW);
+#endif
+#endif
+}
+void pitar(uint8_t n) { if (buzPitidos < 6) buzPitidos += n; }
+void alarmaBuzzer(uint32_t ms) { buzAlarmaHasta = millis() + ms; }
+void callarBuzzer() { buzAlarmaHasta = 0; buzPitidos = 0; buzzer(false); }
+void buzzerLoop() {
+#if USAR_BUZZER
+  static uint32_t t0 = 0; static bool on = false;
+  uint32_t ahora = millis();
+  if (buzAlarmaHasta && (int32_t)(ahora - buzAlarmaHasta) < 0) {   // alarma: 200 ms sí / 300 ms no
+    bool debe = (ahora % 500) < 200;
+    if (debe != on) { on = debe; buzzer(on); }
+    return;
+  }
+  if (buzAlarmaHasta) { buzAlarmaHasta = 0; on = false; buzzer(false); }
+  if (on && ahora - t0 >= 90) { on = false; buzzer(false); t0 = ahora; }
+  else if (!on && buzPitidos && ahora - t0 >= 120) { on = true; buzzer(true); buzPitidos--; t0 = ahora; }
+#endif
+}
 
 // Modo de funcionamiento (se guarda en la memoria permanente)
 Preferences prefs;
@@ -587,7 +620,8 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
     publicarMsg(m);
     Serial.printf("[%s %s] %s\n", via == 'E' ? "CERCA" : "LoRa",
                   tipo == SOS ? "SOS" : "MSG", texto.c_str());
-    if (tipo == SOS) { sosDe = de; sosHasta = millis() + 120000; }
+    if (tipo == SOS) { sosDe = de; sosHasta = millis() + 120000; alarmaBuzzer(30000); }
+    else pitar(1);
     parpadear(3);
   }
 }
@@ -605,6 +639,7 @@ void enviarMensaje(uint8_t tipo, String texto, uint8_t de = EQUIPO) {
   enviarPorVia(via, trama);
   pendientes.push_back({id, tipo, trama, via, 1, millis()});
   Serial.printf("[ENVIADO por %s] %s\n", via == 'E' ? "CERCA" : "LoRa", texto.c_str());
+  if (tipo == SOS) pitar(3);
 }
 
 // Reintentos: por ESP-NOW espera 1.5 s (2 intentos); si no hay respuesta,
@@ -1139,6 +1174,7 @@ void manejarFuego() {
       climaYo.fuego = true;
       Serial.println("[FUEGO] ¡Llama detectada!");
       enviarMensaje(SOS, "SOS: ¡fuego detectado!");
+      alarmaBuzzer(30000);                        // alarma local en esta estación
       proximoClima = millis();                    // enviar los datos ya
       version++;
     }
@@ -1186,6 +1222,7 @@ void manejarClima() {
   } else if (!alarmaGas && g >= GAS_ALARMA) {
     alarmaGas = true;
     enviarMensaje(SOS, "SOS: gas detectado (" + gs + " %)");
+    alarmaBuzzer(30000);                        // alarma local en esta estación
   } else if (alarmaGas && g < GAS_ALARMA - 10) {
     alarmaGas = false;                            // se rearma al bajar del umbral
   }
@@ -1226,6 +1263,7 @@ void manejarClima() {
   if (!alarmaAgua && w >= AGUA_ALARMA) {
     alarmaAgua = true;
     enviarMensaje(SOS, "SOS: nivel de agua alto (" + ws + " %)");
+    alarmaBuzzer(30000);                        // alarma local en esta estación
   } else if (alarmaAgua && w < AGUA_ALARMA - 10) {
     alarmaAgua = false;                           // se rearma al bajar el nivel
   }
@@ -1255,6 +1293,15 @@ void setup() {
   delay(300);
   Serial.printf("\n=== RADIO EQUIPO %d ===\n", EQUIPO);
   pinMode(LED_PIN, OUTPUT);
+#if USAR_BUZZER
+#if BUZZER_PASIVO
+  ledcAttach(BUZZER_PIN, 2700, 8);
+#else
+  pinMode(BUZZER_PIN, OUTPUT);
+#endif
+  buzzer(false);
+  pitar(2);                                       // 2 pitidos al encender: el buzzer funciona
+#endif
   pinMode(BOTON_SOS, INPUT_PULLUP);
   siguienteId = esp_random() % 50000 + 1;         // al azar: evita repetidos tras reiniciar
 #if USAR_DHT
@@ -1390,7 +1437,14 @@ void loop() {
       enviarMensaje(SOS, "SOS: botón de emergencia");
       pulsado = 1;                                 // no repetir hasta soltar
     }
-  } else pulsado = 0;
+  } else {
+    if (pulsado > 1 && millis() - pulsado > 50) {   // toque corto: callar la alarma
+      callarBuzzer();
+      if (sosDe) { sosDe = 0; digitalWrite(LED_PIN, LOW); version++; }
+    }
+    pulsado = 0;
+  }
+  buzzerLoop();
 
   // LED: parpadeo rápido si hay un SOS sin atender
   if (sosDe && millis() < sosHasta) digitalWrite(LED_PIN, (millis() / 120) % 2);
