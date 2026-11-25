@@ -63,6 +63,7 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define FUEGO_AO        35                  // AO -> D35 (GPIO35): intensidad de la llama
 #define FUEGO_DO        27                  // DO -> D27 (GPIO27): detección (umbral del tornillo azul)
 #define FUEGO_ACTIVO_BAJO 1                 // 1 = DO pasa a LOW al detectar llama (lo normal en este módulo)
+#define FUEGO_USAR_AO   1                   // 1 = AO conectado (intensidad en %); 0 = solo DO (0 % / 100 %)
 
 // Sensor de nivel de agua (Keyestudio, pines S, +, -). Se alimenta desde un pin del ESP32
 // solo al medir, para que las pistas no se corroan por electrólisis.
@@ -946,6 +947,7 @@ float leerGas() {
 // Intensidad de la llama en % (0 = nada, 100 = muy cerca). En este módulo la tensión de AO
 // BAJA cuando aumenta la luz infrarroja, por eso se invierte.
 float leerFuego() {
+  if (!FUEGO_USAR_AO) return climaYo.fuego ? 100 : 0;   // solo DO: hay llama o no
   uint32_t suma = 0;
   for (int i = 0; i < 8; i++) { suma += analogRead(FUEGO_AO); delay(1); }
   return 100.0f - (suma / 8.0f) * 100.0f / 4095.0f;
