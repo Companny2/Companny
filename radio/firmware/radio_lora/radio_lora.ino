@@ -57,6 +57,23 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define GAS_PIN        34                   // punto medio del divisor -> D34 (GPIO34)
 #define GAS_ALARMA     60                   // % a partir del cual se envía SOS automático
 #define GAS_CALENTAR_MS 60000               // el sensor necesita ~1 min para calentarse
+
+// Sensor de llama (infrarrojo, módulo LM393 de 4 pines: AO, G, +, DO). Funciona a 3.3 V.
+#define USAR_FUEGO      1                   // 1 = esta estación tiene sensor de llama, 0 = no
+#define FUEGO_AO        35                  // AO -> D35 (GPIO35): intensidad de la llama
+#define FUEGO_DO        27                  // DO -> D27 (GPIO27): detección (umbral del tornillo azul)
+#define FUEGO_ACTIVO_BAJO 1                 // 1 = DO pasa a LOW al detectar llama (lo normal en este módulo)
+
+// Sensor de nivel de agua (Keyestudio, pines S, +, -). Se alimenta desde un pin del ESP32
+// solo al medir, para que las pistas no se corroan por electrólisis.
+#define USAR_AGUA       1                   // 1 = esta estación tiene sensor de agua, 0 = no
+#define AGUA_PIN        32                  // S -> D32 (GPIO32): nivel
+#define AGUA_VCC        33                  // + -> D33 (GPIO33): alimentación encendida solo al medir
+#define AGUA_ALARMA     50                  // % de nivel a partir del cual se envía SOS
+
+// Sensor de presión BME280 / BMP280 (I2C): VIN -> 3V3, GND, SCL -> D22, SDA -> D21.
+// Se detecta solo cuál es: BME280 (presión, temperatura y humedad) o BMP280 (presión y temperatura).
+#define USAR_PRESION    1                   // 1 = esta estación tiene BME280/BMP280, 0 = no
 #define HIST_N         120                  // historial para la gráfica: 120 puntos = 1 hora
 
 // Distancia aproximada a partir de la señal (RSSI), modelo log-distancia:
@@ -76,6 +93,11 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #include <LittleFS.h>
 #include <vector>
 #include "pagina.h"                        // la página del chat (HTML)
+#if USAR_PRESION
+#include <Wire.h>
+#include <Adafruit_BME280.h>                // librería "Adafruit BME280 Library"
+#include <Adafruit_BMP280.h>                // librería "Adafruit BMP280 Library"
+#endif
 #if USAR_DHT
 #include <DHT.h>                            // librería "DHT sensor library" (Adafruit)
 #endif
@@ -99,9 +121,9 @@ enum Tipo   : uint8_t { TEXTO = 0, SOS = 1, AUDIO = 2, FOTO = 3 };
 enum Estado : uint8_t { ENVIANDO = 0, ENTREGADO = 1, FALLIDO = 2, RECIBIDO = 3 };
 
 // Clima (DHT11): lectura propia y la recibida de la otra estación
-struct Clima { bool okTH = false, okGas = false; float t = 0, h = 0, g = 0; uint32_t cuando = 0; };
+struct Clima { bool okTH = false, okGas = false, okF = false, fuego = false, okW = false, okP = false; float t = 0, h = 0, g = 0, f = 0, w = 0, p = 0; uint32_t cuando = 0; };
 // Historial de lecturas para la gráfica (memoria circular)
-struct Punto { float t, h, g; bool okTH, okGas; uint32_t ms; };
+struct Punto { float t, h, g, f, w, p; bool okTH, okGas, okF, okW, okP; uint32_t ms; };
 struct Hist { Punto p[HIST_N]; uint16_t n = 0, ini = 0; };
 
 struct Msg {
@@ -166,13 +188,13 @@ bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
 bool loraVivo() { return ultimoLora && millis() - ultimoLora < LORA_VIVO_MS; }
 
 Clima climaYo, climaOtro;
-bool climaVigente(const Clima& c) { return (c.okTH || c.okGas) && millis() - c.cuando < 180000; }  // 3 min
+bool climaVigente(const Clima& c) { return (c.okTH || c.okGas || c.okF || c.okW || c.okP) && millis() - c.cuando < 180000; }  // 3 min
 Hist histYo, histOtro;
 void agregarHist(Hist& hs, const Clima& c) {
   uint16_t i;
   if (hs.n < HIST_N) { i = (hs.ini + hs.n) % HIST_N; hs.n++; }
   else { i = hs.ini; hs.ini = (hs.ini + 1) % HIST_N; }      // lleno: reemplaza el más viejo
-  hs.p[i] = {c.t, c.h, c.g, c.okTH, c.okGas, millis()};
+  hs.p[i] = {c.t, c.h, c.g, c.f, c.w, c.p, c.okTH, c.okGas, c.okF, c.okW, c.okP, millis()};
 }
 // [[segundos atrás, temp, hum, gas], ...]
 String histJson(const Hist& hs) {
@@ -181,7 +203,9 @@ String histJson(const Hist& hs) {
     const Punto& p = hs.p[(hs.ini + k) % HIST_N];
     if (k) j += ",";
     j += "[" + String((millis() - p.ms) / 1000) + "," + (p.okTH ? String(p.t, 1) : String("null")) + "," +
-         (p.okTH ? String(p.h, 0) : String("null")) + "," + (p.okGas ? String(p.g, 0) : String("null")) + "]";
+         (p.okTH ? String(p.h, 0) : String("null")) + "," + (p.okGas ? String(p.g, 0) : String("null")) + "," +
+         (p.okF ? String(p.f, 0) : String("null")) + "," + (p.okW ? String(p.w, 0) : String("null")) + "," +
+         (p.okP ? String(p.p, 1) : String("null")) + "]";
   }
   return j + "]";
 }
@@ -206,11 +230,19 @@ String climaJson(const Clima& c) {
   if (!climaVigente(c)) return "null";
   String j = "{\"t\":" + (c.okTH ? String(c.t, 1) : String("null")) +
              ",\"h\":" + (c.okTH ? String(c.h, 0) : String("null")) +
-             ",\"g\":" + (c.okGas ? String(c.g, 0) : String("null")) + "}";
+             ",\"g\":" + (c.okGas ? String(c.g, 0) : String("null")) +
+             ",\"f\":" + (c.okF ? String(c.f, 0) : String("null")) + ",\"fa\":" + (c.fuego ? "true" : "false") +
+             ",\"w\":" + (c.okW ? String(c.w, 0) : String("null")) +
+             ",\"p\":" + (c.okP ? String(c.p, 1) : String("null")) + "}";
   return j;
 }
 #if USAR_DHT
 DHT dht(DHT_PIN, DHT_TIPO);
+#endif
+#if USAR_PRESION
+Adafruit_BME280 bme;
+Adafruit_BMP280 bmp;
+uint8_t tipoBaro = 0;                          // 0 = no encontrado, 1 = BME280, 2 = BMP280
 #endif
 
 // ---------------------------------------------------------------------------
@@ -385,7 +417,21 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
     int c2 = s.indexOf(',', c1 + 1);
     int c3 = s.indexOf(',', c2 + 1);
     if (c1 < 0 || c2 < 0 || c3 < 0) return;
-    String ts = s.substring(c1 + 1, c2), hs = s.substring(c2 + 1, c3), gs = s.substring(c3 + 1);
+    int c4 = s.indexOf(',', c3 + 1);                // 5.º campo (fuego) opcional
+    String ts = s.substring(c1 + 1, c2), hs = s.substring(c2 + 1, c3);
+    String gs = c4 < 0 ? s.substring(c3 + 1) : s.substring(c3 + 1, c4);
+    int c5 = c4 < 0 ? -1 : s.indexOf(',', c4 + 1);  // 6.º campo (agua) opcional
+    String fs = c4 < 0 ? String("x") : c5 < 0 ? s.substring(c4 + 1) : s.substring(c4 + 1, c5);   // "37" o "37!" (! = llama)
+    int c6 = c5 < 0 ? -1 : s.indexOf(',', c5 + 1);  // 7.º campo (presión) opcional
+    String ws = c5 < 0 ? String("x") : c6 < 0 ? s.substring(c5 + 1) : s.substring(c5 + 1, c6);
+    String ps = c6 < 0 ? String("x") : s.substring(c6 + 1);
+    climaOtro.okP = (ps != "x");
+    climaOtro.p = ps.toFloat();
+    climaOtro.okW = (ws != "x");
+    climaOtro.w = ws.toFloat();
+    climaOtro.okF = (fs != "x");
+    climaOtro.f = fs.toFloat();
+    climaOtro.fuego = fs.endsWith("!");
     climaOtro.okTH = (ts != "x" && hs != "x");
     climaOtro.t = ts.toFloat();
     climaOtro.h = hs.toFloat();
@@ -394,8 +440,8 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
     climaOtro.cuando = millis();
     agregarHist(histOtro, climaOtro);
     version++;
-    Serial.printf("[CLIMA EQUIPO %d] %s C  %s %%  gas %s %%  (%s)\n", de, ts.c_str(), hs.c_str(), gs.c_str(),
-                  via == 'E' ? "cerca" : "LoRa");
+    Serial.printf("[CLIMA EQUIPO %d] %s C  %s %%  gas %s %%  llama %s  agua %s  %s hPa  (%s)\n", de, ts.c_str(), hs.c_str(),
+                  gs.c_str(), fs.c_str(), ws.c_str(), ps.c_str(), via == 'E' ? "cerca" : "LoRa");
     return;
   }
 
@@ -897,14 +943,64 @@ float leerGas() {
   return (suma / 16.0f) * 100.0f / 4095.0f;
 }
 
-// Lee los sensores cada 30 s y envía los datos a la otra estación
-// (cerca: ESP-NOW, lejos: LoRa). Si el gas supera GAS_ALARMA, envía SOS.
+// Intensidad de la llama en % (0 = nada, 100 = muy cerca). En este módulo la tensión de AO
+// BAJA cuando aumenta la luz infrarroja, por eso se invierte.
+float leerFuego() {
+  uint32_t suma = 0;
+  for (int i = 0; i < 8; i++) { suma += analogRead(FUEGO_AO); delay(1); }
+  return 100.0f - (suma / 8.0f) * 100.0f / 4095.0f;
+}
+bool llamaDetectada() { return digitalRead(FUEGO_DO) == (FUEGO_ACTIVO_BAJO ? LOW : HIGH); }
+
+uint32_t proximoClima = 3000;                     // próxima lectura de sensores (primera a los 3 s)
+
+// Nivel de agua en % (0 = seco, 100 = pistas cubiertas). Enciende el sensor solo 15 ms.
+float leerAgua() {
+  digitalWrite(AGUA_VCC, HIGH);
+  delay(15);
+  uint32_t suma = 0;
+  for (int i = 0; i < 8; i++) { suma += analogRead(AGUA_PIN); delay(1); }
+  digitalWrite(AGUA_VCC, LOW);
+  return (suma / 8.0f) * 100.0f / 4095.0f;
+}
+
+// Vigila el sensor de llama 5 veces por segundo: al detectar llama durante ~0.6 s envía
+// SOS de inmediato y adelanta el envío de datos; se rearma tras 10 s sin llama.
+void manejarFuego() {
+#if USAR_FUEGO
+  static uint32_t ultimo = 0, sinLlamaDesde = 0;
+  static uint8_t seguidas = 0;
+  if (millis() - ultimo < 200) return;
+  ultimo = millis();
+  if (llamaDetectada()) {
+    sinLlamaDesde = millis();
+    if (seguidas < 255) seguidas++;
+    if (seguidas == 3 && !climaYo.fuego) {
+      climaYo.fuego = true;
+      Serial.println("[FUEGO] ¡Llama detectada!");
+      enviarMensaje(SOS, "SOS: ¡fuego detectado!");
+      proximoClima = millis();                    // enviar los datos ya
+      version++;
+    }
+  } else {
+    seguidas = 0;
+    if (climaYo.fuego && millis() - sinLlamaDesde > 10000) {
+      climaYo.fuego = false;                      // 10 s sin llama: se rearma la alarma
+      Serial.println("[FUEGO] Sin llama");
+      proximoClima = millis();
+      version++;
+    }
+  }
+#endif
+}
+
+// Lee los sensores cada 30 s y envía los datos a la otra estación por LoRa.
+// Si el gas supera GAS_ALARMA, envía SOS.
 void manejarClima() {
-#if USAR_DHT || USAR_GAS
-  static uint32_t proximo = 3000;                 // primera lectura a los 3 s
-  if ((int32_t)(millis() - proximo) < 0) return;
-  proximo = millis() + CLIMA_CADA_MS;
-  String ts = "x", hs = "x", gs = "x";
+#if USAR_DHT || USAR_GAS || USAR_FUEGO || USAR_AGUA || USAR_PRESION
+  if ((int32_t)(millis() - proximoClima) < 0) return;
+  proximoClima = millis() + CLIMA_CADA_MS;
+  String ts = "x", hs = "x", gs = "x", fs = "x", ws = "x", ps = "x";
 #if USAR_DHT
   float t = dht.readTemperature();
   float h = dht.readHumidity();
@@ -930,12 +1026,42 @@ void manejarClima() {
     alarmaGas = false;                            // se rearma al bajar del umbral
   }
 #endif
-  if (!climaYo.okTH && !climaYo.okGas) { version++; return; }
+#if USAR_FUEGO
+  float f = leerFuego();
+  climaYo.okF = true; climaYo.f = f;
+  fs = String(f, 0) + (climaYo.fuego ? "!" : "");
+#endif
+#if USAR_PRESION
+  if (tipoBaro) {
+    float p = (tipoBaro == 1 ? bme.readPressure() : bmp.readPressure()) / 100.0f;   // Pa -> hPa
+    if (p > 300 && p < 1200) { climaYo.okP = true; climaYo.p = p; ps = String(p, 1); }
+    // Sin DHT11 (o si falló), la temperatura (y la humedad del BME280) salen de este sensor
+    if (!climaYo.okTH || !USAR_DHT) {
+      float t = tipoBaro == 1 ? bme.readTemperature() : bmp.readTemperature();
+      float h = tipoBaro == 1 ? bme.readHumidity() : NAN;
+      if (!isnan(t)) { climaYo.okTH = true; climaYo.t = t; climaYo.h = isnan(h) ? 0 : h; ts = String(t, 1); hs = isnan(h) ? "0" : String(h, 0); }
+    }
+  }
+#endif
+#if USAR_AGUA
+  float w = leerAgua();
+  climaYo.okW = true; climaYo.w = w;
+  ws = String(w, 0);
+  static bool alarmaAgua = false;
+  if (!alarmaAgua && w >= AGUA_ALARMA) {
+    alarmaAgua = true;
+    enviarMensaje(SOS, "SOS: nivel de agua alto (" + ws + " %)");
+  } else if (alarmaAgua && w < AGUA_ALARMA - 10) {
+    alarmaAgua = false;                           // se rearma al bajar el nivel
+  }
+#endif
+  if (!climaYo.okTH && !climaYo.okGas && !climaYo.okF && !climaYo.okW && !climaYo.okP) { version++; return; }
   climaYo.cuando = millis();
   agregarHist(histYo, climaYo);
   version++;
-  Serial.printf("[CLIMA] %s C  %s %%  gas %s %%\n", ts.c_str(), hs.c_str(), gs.c_str());
-  String trama = "C," + String(EQUIPO) + "," + ts + "," + hs + "," + gs;
+  Serial.printf("[CLIMA] %s C  %s %%  gas %s %%  llama %s  agua %s %%  %s hPa\n", ts.c_str(), hs.c_str(), gs.c_str(),
+                fs.c_str(), ws.c_str(), ps.c_str());
+  String trama = "C," + String(EQUIPO) + "," + ts + "," + hs + "," + gs + "," + fs + "," + ws + "," + ps;
   if ((PREFERIR_LORA && loraOk) || !cerca()) loraEnviar(trama);   // sensores: por LoRa
   else espEnviarTexto(trama);
 #endif
@@ -956,6 +1082,23 @@ void setup() {
 #endif
 #if USAR_GAS
   analogSetPinAttenuation(GAS_PIN, ADC_11db);     // rango completo 0-3.3 V
+#endif
+#if USAR_FUEGO
+  pinMode(FUEGO_DO, FUEGO_ACTIVO_BAJO ? INPUT_PULLUP : INPUT_PULLDOWN);   // sin sensor: no da falsas alarmas
+  analogSetPinAttenuation(FUEGO_AO, ADC_11db);
+#endif
+#if USAR_PRESION
+  Wire.begin(21, 22);                             // SDA = D21, SCL = D22
+  if (bme.begin(0x76) || bme.begin(0x77)) tipoBaro = 1;
+  else if (bmp.begin(0x76) || bmp.begin(0x77)) tipoBaro = 2;
+  Serial.println(tipoBaro == 1 ? "Sensor BME280 listo (presión, temperatura, humedad)" :
+                 tipoBaro == 2 ? "Sensor BMP280 listo (presión, temperatura)" :
+                 "!! No se encontró el BME280/BMP280: revisa VIN->3V3, SDA->D21, SCL->D22");
+#endif
+#if USAR_AGUA
+  pinMode(AGUA_VCC, OUTPUT);
+  digitalWrite(AGUA_VCC, LOW);
+  analogSetPinAttenuation(AGUA_PIN, ADC_11db);
 #endif
 
   // Memoria para fotos y audios (se borra al encender)
@@ -1033,6 +1176,7 @@ void loop() {
   }
 
   loraLoop();
+  manejarFuego();
   manejarClima();
   revisarPendientes();
   txLoop();

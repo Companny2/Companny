@@ -24,6 +24,12 @@
   #grafCard .tab.sel{background:var(--az);color:#ffffff}
   #grafCard .ley{margin-left:auto;font-size:12px;color:var(--mu)}
   #gSvg{width:100%;height:220px;display:block}
+  .sens{width:100%;border-collapse:collapse;font-size:14px}
+  .sens th{font-size:12px;color:var(--mu);font-weight:600;text-align:right;padding:2px 0 6px}
+  .sens td{padding:4px 0;border-top:1px solid var(--line);white-space:nowrap}
+  .sens td+td{padding-left:10px}
+  .sens td+td{text-align:right;font-weight:700}
+  .sens td.alerta{color:var(--bad)}
   .clima{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px;color:var(--mu);margin:4px 0}
   .clima span{white-space:nowrap}
   .clima b{text-align:right}
@@ -84,10 +90,17 @@
       <div class="sub" id="loraSnr">SNR 0 dB · sin datos</div>
     </section>
     <section class="card">
-      <h2>🌡 Clima y gas <span id="stClima" class="pill off">Sin enlace</span></h2>
-      <div class="clima"><span>Estación 1</span><b id="cl1">0 °C · 0 % · gas 0 %</b></div>
-      <div class="clima"><span>Estación 2</span><b id="cl2">0 °C · 0 % · gas 0 %</b></div>
-      <div class="sub" id="clSub">Sin datos de temperatura, humedad y gas</div>
+      <h2>🌡 Sensores <span id="stClima" class="pill off">Sin enlace</span></h2>
+      <table class="sens">
+        <tr><th></th><th>Radio 1</th><th>Radio 2</th></tr>
+        <tr><td>🌡 Temperatura</td><td id="s1t">0 °C</td><td id="s2t">0 °C</td></tr>
+        <tr><td>💧 Humedad</td><td id="s1h">0 %</td><td id="s2h">0 %</td></tr>
+        <tr><td>🧭 Presión</td><td id="s1p">0 hPa</td><td id="s2p">0 hPa</td></tr>
+        <tr><td>💨 Gas / humo</td><td id="s1g">0 %</td><td id="s2g">0 %</td></tr>
+        <tr><td>🔥 Llama</td><td id="s1f">0 %</td><td id="s2f">0 %</td></tr>
+        <tr><td>🌊 Agua</td><td id="s1w">0 %</td><td id="s2w">0 %</td></tr>
+      </table>
+      <div class="sub" id="clSub">Sin datos de los sensores</div>
     </section>
     <section class="card">
       <h2>📏 Distancia aprox. <span id="stDist" class="pill off">Sin enlace</span></h2>
@@ -98,7 +111,7 @@
 
   <section class="card" id="grafCard">
     <h2>📈 Historial (última hora)</h2>
-    <div class="tabs"><button class="tab sel" data-k="t">Temperatura</button><button class="tab" data-k="h">Humedad</button><button class="tab" data-k="g">Gas</button>
+    <div class="tabs"><button class="tab sel" data-k="t">Temperatura</button><button class="tab" data-k="h">Humedad</button><button class="tab" data-k="g">Gas</button><button class="tab" data-k="f">Llama</button><button class="tab" data-k="w">Agua</button><button class="tab" data-k="p">Presión</button>
       <span class="ley"><b style="color:#1f7ae0">━</b> Estación 1 &nbsp;<b style="color:#e08600">━</b> Estación 2</span></div>
     <svg id="gSvg"></svg>
   </section>
@@ -161,7 +174,7 @@ function mostrarDist(d) {
 }
 // --- historial y gráfica (se acumula mientras la página está abierta) ---
 let hist = [], gK = "t";
-const gUni = { t: "°C", h: "%", g: "%" };
+const gUni = { t: "°C", h: "%", g: "%", f: "%", w: "%", p: "hPa" };
 function graficar() {
   const svg = $("gSvg"), W = svg.clientWidth || 600, H = 220, L = 40, R = 10, T = 10, B = 22, ahora = Date.now();
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
@@ -190,11 +203,15 @@ function mostrarClima(c, vivo) {
   if (vivo && c && (c["1"] || c["2"])) { hist.push({ ms: Date.now(), "1": c["1"], "2": c["2"] }); if (hist.length > 400) hist.shift(); }
   graficar();
   c = c || {};
-  const f = x => (x && x.t != null ? x.t + " °C · " + x.h + " %" : "0 °C · 0 %") + " · gas " + (x && x.g != null ? x.g : 0) + " %";
-  $("cl1").textContent = f(c["1"]); $("cl2").textContent = f(c["2"]);
+  for (const n of ["1", "2"]) {
+    const x = c[n] || {}, v = (k, u) => (x[k] != null ? x[k] : 0) + " " + u;
+    $("s" + n + "t").textContent = v("t", "°C"); $("s" + n + "h").textContent = v("h", "%"); $("s" + n + "p").textContent = v("p", "hPa");
+    $("s" + n + "g").textContent = v("g", "%"); $("s" + n + "w").textContent = v("w", "%");
+    $("s" + n + "f").textContent = x.fa ? "¡FUEGO!" : v("f", "%"); $("s" + n + "f").classList.toggle("alerta", !!x.fa);
+  }
   const hay = !!(c["1"] || c["2"]);
   pill($("stClima"), hay, "Con datos", "Sin enlace", "on");
-  $("clSub").textContent = hay ? "Temperatura, humedad y nivel de gas, cada 30 s" : "Sin datos de temperatura, humedad y gas";
+  $("clSub").textContent = hay ? "Actualizado cada 30 s · alarma de fuego inmediata" : "Sin datos de los sensores";
 }
 function mostrarEstado(e, vivo) {
   if (!vivo) return;                       // un dato guardado no indica enlace actual
@@ -286,9 +303,9 @@ $("sos").onclick = () => {
 if (DEMO) {
   pill($("conn"), true, "Demo", "");
   for (let i = 120; i > 0; i--) hist.push({ ms: Date.now() - i * 30000,
-    "1": { t: +(27.5 + Math.sin(i / 20) * 1.2).toFixed(1), h: Math.round(70 + Math.cos(i / 25) * 4), g: Math.round(12 + Math.sin(i / 9) * 3) },
+    "1": { t: +(27.5 + Math.sin(i / 20) * 1.2).toFixed(1), h: Math.round(70 + Math.cos(i / 25) * 4), g: Math.round(12 + Math.sin(i / 9) * 3), f: 2, w: 0, p: +(1011 + Math.sin(i / 30)).toFixed(1) },
     "2": i < 70 ? { t: +(31 + Math.sin(i / 15) * 0.8).toFixed(1), h: Math.round(63 + Math.sin(i / 18) * 3), g: Math.round(17 + Math.cos(i / 7) * 2) } : null });
-  mostrarEstado({ base: true, equipo: 1, otro: 2, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, dist: { m: 1850, via: "L" }, clima: { "1": { t: 27.8, h: 71, g: 12 }, "2": { t: 31.4, h: 64, g: 18 } } }, true);
+  mostrarEstado({ base: true, equipo: 1, otro: 2, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, dist: { m: 1850, via: "L" }, clima: { "1": { t: 27.8, h: 71, g: 12, f: 3, w: 0, p: 1011.2 }, "2": { t: 31.4, h: 64, g: 18, f: 2, w: 35, p: 1009.8 } } }, true);
   const t0 = Math.floor(Date.now() / 1000);
   [{ de: 2, id: 1, t: 0, e: 3, via: "L", ts: t0 - 900, x: "Llegué al cerro, ¿me copias?" },
    { de: 1, id: 2, t: 0, e: 1, via: "L", ts: t0 - 840, x: "Fuerte y claro 👍" },

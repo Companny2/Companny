@@ -87,7 +87,7 @@ input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(
     <div class="nota">Al conectarse, la red Radio puede cambiar de canal: si el celular se desconecta, vuelve a conectarlo a la red Radio y abre 192.168.4.1.</div>
   </div>
 </div>
-<div id="graf"><div class="tabs"><button class="tab sel" id="gTog">📈 Gráfica</button><button class="tab sel" data-k="1">Temp.</button><button class="tab" data-k="2">Humedad</button><button class="tab" data-k="3">Gas</button><span class="ley"><b style="color:#1f7ae0">━</b> Aquí <b style="color:#e08600">━</b> Otro</span></div><svg id="gSvg"></svg></div>
+<div id="graf"><div class="tabs"><button class="tab sel" id="gTog">📈 Gráfica</button><button class="tab sel" data-k="1">Temp.</button><button class="tab" data-k="2">Humedad</button><button class="tab" data-k="3">Gas</button><button class="tab" data-k="4">Llama</button><button class="tab" data-k="5">Agua</button><button class="tab" data-k="6">Presión</button><span class="ley"><b style="color:#1f7ae0">━</b> Aquí <b style="color:#e08600">━</b> Otro</span></div><svg id="gSvg"></svg></div>
 <div id="alerta"><span id="alertaTxt">🚨 SOS</span><button id="visto">Visto</button></div>
 <div id="lista"><div class="vacio" id="vacio">Aún no hay mensajes.<br>Escribe abajo para empezar.</div></div>
 <div id="aviso"></div>
@@ -135,7 +135,7 @@ function pintar(j) {
   l.textContent = "📡 LoRa (principal): " + (!j.lora.ok ? "sin módulo" : j.lora.on ? j.lora.rssi + " dBm · SNR " + j.lora.snr : "esperando…");
   l.className = "chip" + (j.lora.on ? " lo" : "");
   if ("web" in j) { const w = $("cWeb"); w.style.display = ""; w.className = "chip" + (j.web ? " on" : ""); w.textContent = "🌐 Web: " + (j.web ? "conectada" : "sin conexión"); }
-  const cl = j.clima || {}, fc = x => !x ? "sin datos" : [x.t != null ? x.t + "°C · " + x.h + "%" : "", x.g != null ? "gas " + x.g + "%" : ""].filter(Boolean).join(" · ");
+  const cl = j.clima || {}, fc = x => !x ? "sin datos" : [x.t != null ? x.t + "°C · " + x.h + "%" : "", x.g != null ? "gas " + x.g + "%" : "", x.fa ? "🔥 ¡FUEGO!" : x.f != null ? "llama " + x.f + "%" : "", x.w != null ? "agua " + x.w + "%" : "", x.p != null ? x.p + " hPa" : ""].filter(Boolean).join(" · ");
   $("cClima").textContent = "🌡 Aquí: " + fc(cl.yo) + " | Radio " + j.otro + ": " + fc(cl.otro);
   $("cClima").className = "chip" + (cl.yo || cl.otro ? " on" : "");
   const fDist = m => m < 100 ? "~" + Math.round(m) + " m" : m < 1000 ? "~" + Math.round(m / 10) * 10 + " m" : "~" + (m / 1000).toFixed(1) + " km";
@@ -211,7 +211,7 @@ $("iAudio").onchange = e => {
 };
 // --- gráfica (sin internet: se dibuja con SVG) ---
 let gK = 1, gDatos = null;
-const gUni = { 1: "°C", 2: "%", 3: "%" };
+const gUni = { 1: "°C", 2: "%", 3: "%", 4: "%", 5: "%", 6: "hPa" };
 function graficar() {
   const svg = $("gSvg"), W = svg.clientWidth || 360, H = 150, L = 30, R = 8, T = 8, B = 18;
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
