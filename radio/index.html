@@ -43,6 +43,8 @@
   .m{max-width:80%;padding:8px 11px;border-radius:12px;background:var(--bg)}
   .m small{display:block;font-size:11px;color:var(--mu)}
   .m.web{align-self:flex-end;background:var(--yo)}
+  .m.r1{border-left:3px solid var(--az)}
+  .m.r2{border-left:3px solid var(--lo)}
   .m.sos{background:#5c1a1a;border:1px solid var(--bad)}
   .vacio{color:var(--mu);margin:auto;font-size:14px}
   form{display:flex;gap:8px}
@@ -66,9 +68,9 @@
 
   <div class="grid">
     <section class="card">
-      <h2>Estación base <span id="stBase" class="pill off">Sin enlace</span></h2>
+      <h2>📻 Estaciones <span id="stBase" class="pill off">Sin enlace</span></h2>
       <div class="big" id="baseTxt">0<span> estaciones</span></div>
-      <div class="sub" id="baseSub">Sin datos: no hay enlace con la estación base</div>
+      <div class="sub" id="baseSub">Radio 1: sin enlace · Radio 2: sin enlace</div>
     </section>
     <section class="card">
       <h2>⚡ Enlace cercano <span id="stCerca" class="pill off">Sin enlace</span></h2>
@@ -101,7 +103,7 @@
   </section>
 
   <section class="card">
-    <h2>Mensajes</h2>
+    <h2>💬 Chat entre Radio 1 y Radio 2</h2>
     <div id="log"><div class="vacio" id="vacio">0 mensajes · sin enlace con las estaciones</div></div>
     <form id="f">
       <input id="txt" maxlength="150" placeholder="Escribe a las estaciones…" autocomplete="off">
@@ -139,7 +141,7 @@ function sinEnlace() {
   $("aviso").style.display = "";
   pill($("stBase"), false, "", "Sin enlace");
   $("baseTxt").innerHTML = "0<span> estaciones</span>";
-  $("baseSub").textContent = "Sin datos: no hay enlace con la estación base";
+  $("baseSub").textContent = "Radio 1: sin enlace · Radio 2: sin enlace";
   pill($("stCerca"), false, "", "Sin enlace");
   $("cercaRssi").innerHTML = "0<span> dBm</span>";
   pill($("stLora"), false, "", "Sin enlace");
@@ -198,9 +200,11 @@ function mostrarEstado(e, vivo) {
   ultimoEstado = Date.now();
   if (!e.base) { sinEnlace(); return; }
   $("aviso").style.display = "none";
+  const rb = e.equipo || 1, ro = e.otro || 2, otraOn = e.cerca.on || e.lora.on;
   pill($("stBase"), true, "En línea", "");
-  $("baseTxt").innerHTML = "En línea";
-  $("baseSub").textContent = "Conectada al WiFi de casa y a este servidor";
+  $("baseTxt").innerHTML = (otraOn ? 2 : 1) + "<span> " + (otraOn ? "estaciones" : "estación") + "</span>";
+  $("baseSub").textContent = "Radio " + rb + ": en línea (internet) · Radio " + ro + ": " +
+    (e.cerca.on ? "en línea ⚡ cerca" : e.lora.on ? "en línea 📡 LoRa" : "sin enlace");
   pill($("stCerca"), e.cerca.on, "Cerca", "Fuera de alcance");
   $("cercaRssi").innerHTML = (e.cerca.on ? e.cerca.rssi : 0) + "<span> dBm</span>";
   pill($("stLora"), e.lora.on, "Activo", "Sin señal", "lo");
@@ -213,18 +217,32 @@ setInterval(() => {   // la base publica su estado cada 10 s; 30 s sin datos = s
   if (!DEMO && Date.now() - ultimoEstado > 30000) sinEnlace();
 }, 1000);
 
-// --- mensajes ---
-function nombre(n) { return n == 0 ? "Web" : "Equipo " + n; }
-function addMsg(m) {
-  $("vacio").style.display = "none";
-  const d = document.createElement("div");
-  d.className = "m" + (m.de == 0 ? " web" : "") + (m.t == 1 ? " sos" : "");
-  const s = document.createElement("small");
-  const via = m.via == "E" ? " · ⚡ cerca" : m.via == "L" ? " · 📡 LoRa" : "";
-  s.textContent = nombre(m.de) + " · " + new Date().toLocaleTimeString("es-PA", { hour: "2-digit", minute: "2-digit" }) + via;
-  d.append(s, document.createTextNode((m.t == 1 ? "🚨 " : "") + m.x));
-  $("log").append(d); $("log").scrollTop = $("log").scrollHeight;
-  if (m.t == 1 && m.de != 0) {
+// --- mensajes (historial guardado por la base + mensajes en vivo) ---
+function nombre(n) { return n == 0 ? "Web" : "Radio " + n; }
+const chat = new Map();                    // clave "de-id" -> mensaje (en orden de llegada)
+function dibujarChat() {
+  const log = $("log"), abajo = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
+  log.querySelectorAll(".m").forEach(n => n.remove());
+  $("vacio").style.display = chat.size ? "none" : "";
+  for (const m of chat.values()) {
+    const d = document.createElement("div");
+    d.className = "m" + (m.de == 0 ? " web" : " r" + m.de) + (m.t == 1 ? " sos" : "");
+    const s = document.createElement("small");
+    const hora = new Date(m.ts ? m.ts * 1000 : m.llego).toLocaleTimeString("es-PA", { hour: "2-digit", minute: "2-digit" });
+    const via = m.via == "E" ? "⚡ cerca" : m.via == "L" ? "📡 LoRa" : "";
+    const est = m.e == 0 ? "⏳ enviando" : m.e == 1 ? "✓ entregado" : m.e == 2 ? "✕ no entregado" : "";
+    s.textContent = [nombre(m.de), hora, via, est].filter(Boolean).join(" · ");
+    d.append(s, document.createTextNode((m.t == 1 ? "🚨 " : "") + m.x));
+    log.append(d);
+  }
+  if (abajo) log.scrollTop = log.scrollHeight;
+}
+function addMsg(m, vivo = true) {
+  const k = m.de + "-" + m.id, ant = chat.get(k);
+  chat.set(k, Object.assign({ llego: Date.now() }, ant, m));
+  while (chat.size > 60) chat.delete(chat.keys().next().value);
+  dibujarChat();
+  if (vivo && !ant && m.t == 1 && m.de != 0) {
     $("alertaTxt").textContent = "🚨 " + nombre(m.de) + ": " + m.x;
     $("alerta").style.display = "flex";
     if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
@@ -243,6 +261,7 @@ if (!DEMO) {
     try {
       if (sub === "estado") mostrarEstado(JSON.parse(payload), !packet.retain);
       else if (sub === "radio/msg") addMsg(JSON.parse(payload));
+      else if (sub === "radio/historial") JSON.parse(payload).forEach(m => addMsg(m, false));
     } catch (e) { console.warn(e); }
   });
 }
@@ -264,12 +283,13 @@ if (DEMO) {
   for (let i = 120; i > 0; i--) hist.push({ ms: Date.now() - i * 30000,
     "1": { t: +(27.5 + Math.sin(i / 20) * 1.2).toFixed(1), h: Math.round(70 + Math.cos(i / 25) * 4), g: Math.round(12 + Math.sin(i / 9) * 3) },
     "2": i < 70 ? { t: +(31 + Math.sin(i / 15) * 0.8).toFixed(1), h: Math.round(63 + Math.sin(i / 18) * 3), g: Math.round(17 + Math.cos(i / 7) * 2) } : null });
-  mostrarEstado({ base: true, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, dist: { m: 1850, via: "L" }, clima: { "1": { t: 27.8, h: 71, g: 12 }, "2": { t: 31.4, h: 64, g: 18 } } }, true);
-  addMsg({ de: 2, t: 0, via: "L", x: "Llegué al cerro, ¿me copias?" });
-  addMsg({ de: 1, t: 0, via: "L", x: "Fuerte y claro 👍" });
-  addMsg({ de: 0, t: 0, via: "L", x: "🌐 Saludos desde la web" });
-  addMsg({ de: 2, t: 2, via: "E", x: "🎤 Nota de voz" });
-  addMsg({ de: 2, t: 1, via: "L", x: "SOS: botón de emergencia" });
+  mostrarEstado({ base: true, equipo: 1, otro: 2, cerca: { on: false, rssi: 0 }, lora: { on: true, rssi: -101, snr: 4 }, dist: { m: 1850, via: "L" }, clima: { "1": { t: 27.8, h: 71, g: 12 }, "2": { t: 31.4, h: 64, g: 18 } } }, true);
+  const t0 = Math.floor(Date.now() / 1000);
+  [{ de: 2, id: 1, t: 0, e: 3, via: "L", ts: t0 - 900, x: "Llegué al cerro, ¿me copias?" },
+   { de: 1, id: 2, t: 0, e: 1, via: "L", ts: t0 - 840, x: "Fuerte y claro 👍" },
+   { de: 0, id: 3, t: 0, e: 1, via: "L", ts: t0 - 600, x: "🌐 Saludos desde la web" },
+   { de: 2, id: 4, t: 2, e: 3, via: "E", ts: t0 - 300, x: "🎤 Nota de voz" }].forEach(m => addMsg(m, false));
+  addMsg({ de: 2, id: 5, t: 1, e: 3, via: "L", ts: t0 - 30, x: "SOS: botón de emergencia" });
 }
 </script>
 </body>

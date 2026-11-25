@@ -8,11 +8,14 @@
    - CERCA  (ESP-NOW, ~100-200 m): texto, notas de voz y fotos.
    - LEJOS  (LoRa, varios km):     texto y SOS.
    - El cambio entre CERCA y LEJOS es automático.
-   - Opcional: la estación BASE se conecta al WiFi de tu casa y publica todo
-     en una página web (GitHub Pages) mediante MQTT.
+   - Al abrir la página aparece un MENÚ:
+       · Modo SIN internet: solo radio entre las estaciones.
+       · Modo CON internet: la radio se conecta a una red WiFi (elegida desde
+         el celular) y publica todo en www.panarepara.com/radio mediante MQTT.
+     El modo y la red quedan guardados; se puede cambiar sin perder datos.
 
    Arduino IDE: placa "ESP32 Dev Module", núcleo ESP32 3.x
-   Librería: "PubSubClient" (solo si ES_BASE = 1)
+   Librerías: "PubSubClient" y "DHT sensor library" (Adafruit)
   ============================================================================
 */
 
@@ -20,15 +23,12 @@
 // 1) CONFIGURACIÓN
 // ---------------------------------------------------------------------------
 #define EQUIPO   1          // 1 en una placa, 2 en la otra
-#define ES_BASE  0          // 1 = se conecta al WiFi de casa y a la web (solo UNA placa)
 
 // WiFi que crea la placa para tu celular
 const char* CLAVE_AP = "radio1234";        // mínimo 8 caracteres
-#define CANAL_WIFI 1                       // igual en las dos placas (ver guía)
+#define CANAL_WIFI 1                       // canal inicial; luego se ajusta solo
 
-// Solo para la BASE
-const char* WIFI_SSID    = "TU_WIFI";
-const char* WIFI_PASS    = "TU_CLAVE";
+// Modo CON internet (la red WiFi se elige desde el menú del celular)
 const char* MQTT_HOST    = "broker.hivemq.com";
 const int   MQTT_PORT    = 1883;
 const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único (igual en la web)
@@ -78,9 +78,8 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #if USAR_DHT
 #include <DHT.h>                            // librería "DHT sensor library" (Adafruit)
 #endif
-#if ES_BASE
-#include <PubSubClient.h>
-#endif
+#include <PubSubClient.h>                   // MQTT (modo con internet)
+#include <Preferences.h>                    // memoria permanente (modo y red WiFi)
 
 // ---------------------------------------------------------------------------
 // 3) CONSTANTES Y TIPOS
@@ -114,6 +113,7 @@ struct Msg {
   int16_t  rssi;      // señal con la que llegó
   uint8_t  progreso;  // % de envío de archivos
   String   texto;     // texto, o ruta del archivo
+  uint32_t ts;        // hora real (epoch) si la base tiene internet; 0 si no se conoce
 };
 std::vector<Msg> msgs;
 uint32_t version = 1;          // cambia cada vez que algo cambia (para la web)
@@ -149,11 +149,16 @@ bool loraOcupado = false;
 uint32_t loraDesde = 0;
 String lineaLora;
 
-#if ES_BASE
 WiFiClient net;
 PubSubClient mqtt(net);
 String T(const char* s) { return String(TOPIC_PREFIX) + "/" + s; }
-#endif
+
+// Modo de funcionamiento (se guarda en la memoria permanente)
+Preferences prefs;
+bool modoOnline = false;                       // false = sin internet, true = con internet
+String redSsid, redClave;                      // red WiFi elegida en el menú
+uint8_t canalActual = CANAL_WIFI;
+bool online() { return modoOnline && WiFi.status() == WL_CONNECTED; }
 
 bool cerca() { return ultimoEspNow && millis() - ultimoEspNow < CERCA_MS; }
 bool loraVivo() { return ultimoLora && millis() - ultimoLora < LORA_VIVO_MS; }
@@ -223,6 +228,8 @@ Msg& agregar(const Msg& m) {
     msgs.erase(msgs.begin());
   }
   msgs.push_back(m);
+  time_t ahora = time(nullptr);
+  msgs.back().ts = (ahora > 1700000000) ? (uint32_t)ahora : 0;   // hora de internet (solo la base)
   version++;
   return msgs.back();
 }
@@ -361,7 +368,11 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
   uint8_t de = s.substring(2, c1 < 0 ? s.length() : c1).toInt();
   if (de == EQUIPO) return;                       // eco de mí mismo
 
-  if (tipoTrama == 'P') return;                   // latido: ya se anotó la señal
+  if (tipoTrama == 'P') {                         // latido: P,<de>,<canal>,<con internet 0/1>
+    int c2 = s.indexOf(',', c1 + 1);
+    if (c1 > 0 && c2 > 0 && s.substring(c2 + 1) == "1") seguirCanal(s.substring(c1 + 1, c2).toInt(), de);
+    return;
+  }
 
   if (tipoTrama == 'C') {                         // clima: C,<de>,<temp>,<hum>,<gas>  ("x" = sin dato)
     int c2 = s.indexOf(',', c1 + 1);
@@ -604,9 +615,7 @@ void apiEstado() {
   j += ",\"sos\":" + String(sosDe);
   j += ",\"clima\":{\"yo\":" + climaJson(climaYo) + ",\"otro\":" + climaJson(climaOtro) + "}";
   j += ",\"dist\":" + distJson();
-#if ES_BASE
-  j += ",\"web\":" + String(mqtt.connected() ? "true" : "false");
-#endif
+  if (modoOnline) j += ",\"web\":" + String(mqtt.connected() ? "true" : "false");
   j += ",\"msgs\":[";
   for (size_t i = 0; i < msgs.size(); i++) {
     const Msg& m = msgs[i];
@@ -630,6 +639,50 @@ void apiEnviar() {
 }
 
 void apiSosVisto() { sosDe = 0; version++; server.send(200, "text/plain", "ok"); }
+
+// --- Menú: modo sin internet / con internet ---
+// Estado de la red: {"modo":"online|offline","ssid":"...","estado":"...","ip":"...","canal":6,"web":true}
+void apiRed() {
+  String est = !modoOnline ? "offline" : WiFi.status() == WL_CONNECTED ? "conectado" :
+               WiFi.status() == WL_CONNECT_FAILED ? "clave" : WiFi.status() == WL_NO_SSID_AVAIL ? "noRed" : "conectando";
+  String j = "{\"modo\":\"" + String(modoOnline ? "online" : "offline") + "\",\"ssid\":\"" + jsonEsc(redSsid) +
+             "\",\"estado\":\"" + est + "\",\"ip\":\"" + (online() ? WiFi.localIP().toString() : String("")) +
+             "\",\"canal\":" + String(canalActual) + ",\"web\":" + String(mqtt.connected() ? "true" : "false") + "}";
+  server.sendHeader("Cache-Control", "no-store");
+  server.send(200, "application/json", j);
+}
+// Busca redes WiFi (en segundo plano): {"listo":false} o {"listo":true,"redes":[...]}
+void apiEscanear() {
+  int n = WiFi.scanComplete();
+  if (n == WIFI_SCAN_FAILED || (n >= 0 && server.arg("nuevo") == "1")) {
+    WiFi.scanDelete();
+    WiFi.scanNetworks(true);
+    n = WIFI_SCAN_RUNNING;
+  }
+  if (n < 0) { server.send(200, "application/json", "{\"listo\":false}"); return; }
+  String j = "{\"listo\":true,\"redes\":[";
+  int k = 0;
+  for (int i = 0; i < n && k < 20; i++) {
+    if (WiFi.SSID(i).isEmpty()) continue;
+    if (k++) j += ",";
+    j += "{\"s\":\"" + jsonEsc(WiFi.SSID(i)) + "\",\"r\":" + String(WiFi.RSSI(i)) +
+         ",\"seg\":" + String(WiFi.encryptionType(i) != WIFI_AUTH_OPEN ? "true" : "false") + "}";
+  }
+  server.send(200, "application/json", j + "]}");
+}
+void apiModo() {
+  if (server.arg("m") == "offline") ponerOffline();
+  else if (redSsid.length()) ponerOnline(redSsid, redClave);   // reconectar a la red guardada
+  else { server.send(400, "text/plain", "Primero elige una red"); return; }
+  server.send(200, "text/plain", "ok");
+}
+void apiConectar() {
+  String ssid = server.arg("ssid");
+  if (!ssid.length()) { server.send(400, "text/plain", "Falta la red"); return; }
+  server.send(200, "text/plain", "ok");           // responder antes: el celular puede desconectarse un momento
+  delay(100);
+  ponerOnline(ssid, server.arg("clave"));
+}
 
 // Subida de foto / audio desde el celular
 File subida; String subidaRuta; bool subidaMal = false;
@@ -691,6 +744,10 @@ void iniciarWeb() {
   });
   server.on("/enviar", HTTP_POST, apiEnviar);
   server.on("/sosvisto", HTTP_POST, apiSosVisto);
+  server.on("/red", apiRed);
+  server.on("/escanear", apiEscanear);
+  server.on("/modo", HTTP_POST, apiModo);
+  server.on("/conectar", HTTP_POST, apiConectar);
   server.on("/subir", HTTP_POST, apiSubidaFin, apiSubidaDatos);
   // Respuestas para que el celular no crea que "no hay internet" y se desconecte
   server.on("/generate_204", []() { server.send(204); });
@@ -705,9 +762,8 @@ void iniciarWeb() {
 }
 
 // ---------------------------------------------------------------------------
-// 11) MQTT (solo BASE): puente con la página de GitHub
+// 11) MODO CON INTERNET: red WiFi + MQTT (puente con www.panarepara.com/radio)
 // ---------------------------------------------------------------------------
-#if ES_BASE
 void onMqtt(char* topic, byte* payload, unsigned int len) {
   String s; for (unsigned i = 0; i < len; i++) s += (char)payload[i];
   bool sos = String(topic).endsWith("/web/sos");
@@ -716,7 +772,8 @@ void onMqtt(char* topic, byte* payload, unsigned int len) {
 }
 
 void mqttLoop() {
-  if (WiFi.status() != WL_CONNECTED) return;
+  static uint32_t firmaAnt = 0, ultimoHist = 0;   // para publicar el historial solo si cambió
+  if (!online()) return;
   if (!mqtt.connected()) {
     static uint32_t intento = 0;
     if (millis() - intento < 5000) return;
@@ -726,28 +783,101 @@ void mqttLoop() {
     mqtt.subscribe(T("web/msg").c_str());
     mqtt.subscribe(T("web/sos").c_str());
     Serial.println("MQTT conectado");
+    firmaAnt = 0;                                  // recién conectado: publicar el historial
   }
   mqtt.loop();
+  // Historial del chat (últimos 20 mensajes), retenido: quien abre la web ve la conversación
+  if (millis() - ultimoHist > 2000) {
+    ultimoHist = millis();
+    uint32_t firma = msgs.size();
+    for (auto& m : msgs) firma = firma * 31 + m.id * 7 + m.estado * 3 + m.progreso;
+    if (firma != firmaAnt) {
+      firmaAnt = firma;
+      String j = "[";
+      size_t desde = msgs.size() > 20 ? msgs.size() - 20 : 0;
+      for (size_t i = desde; i < msgs.size(); i++) { if (i > desde) j += ","; j += msgJson(msgs[i]); }
+      j += "]";
+      mqtt.publish(T("radio/historial").c_str(), j.c_str(), true);
+    }
+  }
   static uint32_t ultimo = 0;
   if (millis() - ultimo > 10000) {
     ultimo = millis();
-    String j = "{\"base\":true,\"cerca\":{\"on\":" + String(cerca() ? "true" : "false") + ",\"rssi\":" + String(espRssi) +
+    String j = "{\"base\":true,\"equipo\":" + String(EQUIPO) + ",\"otro\":" + String(OTRO) + ",\"cerca\":{\"on\":" + String(cerca() ? "true" : "false") + ",\"rssi\":" + String(espRssi) +
                "},\"lora\":{\"on\":" + String(loraVivo() ? "true" : "false") + ",\"rssi\":" + String(loraRssi) +
                ",\"snr\":" + String(loraSnr) + "},\"dist\":" + distJson() + ",\"clima\":{\"" + String(EQUIPO) + "\":" + climaJson(climaYo) +
                ",\"" + String(OTRO) + "\":" + climaJson(climaOtro) + "}}";
     mqtt.publish(T("estado").c_str(), j.c_str(), true);
   }
 }
-#endif
+
+// Latido: P,<equipo>,<canal>,<con internet>. La otra radio usa el canal para seguirnos.
+String tramaLatido() { return "P," + String(EQUIPO) + "," + String(canalActual) + "," + (online() ? "1" : "0"); }
+uint32_t latidoLoraForzado = 0;                // para avisar enseguida un cambio de canal
+
+// Cambia el canal WiFi para coincidir con la otra radio cuando ella tiene internet
+void seguirCanal(int canal, uint8_t de) {
+  if (online() || canal < 1 || canal > 13 || canal == canalActual) return;
+  canalActual = canal;
+  prefs.putUChar("canal", canal);
+  String nombre = "Radio-" + String(EQUIPO);
+  WiFi.softAP(nombre.c_str(), CLAVE_AP, canal);
+  Serial.printf("[WIFI] Canal cambiado a %d para seguir a Radio %d\n", canal, de);
+  version++;
+}
+
+// Pasa a modo SIN internet (no borra mensajes ni historial)
+void ponerOffline() {
+  modoOnline = false;
+  prefs.putBool("online", false);
+  mqtt.disconnect();
+  WiFi.setAutoReconnect(false);
+  WiFi.disconnect(false, false);                // desconecta del router, mantiene la red Radio-N
+  Serial.println("[MODO] Sin internet");
+  version++;
+}
+
+// Pasa a modo CON internet con la red indicada
+void ponerOnline(const String& ssid, const String& clave) {
+  redSsid = ssid; redClave = clave; modoOnline = true;
+  prefs.putString("ssid", ssid); prefs.putString("clave", clave); prefs.putBool("online", true);
+  WiFi.setAutoReconnect(true);
+  WiFi.disconnect(false, false);
+  WiFi.begin(ssid.c_str(), clave.c_str());
+  Serial.printf("[MODO] Con internet: conectando a \"%s\"...\n", ssid.c_str());
+  version++;
+}
+
+// Detecta cuándo se conecta o desconecta del router
+void revisarRed() {
+  static bool antes = false;
+  bool ahora = online();
+  if (ahora == antes) return;
+  antes = ahora;
+  if (ahora) {
+    canalActual = WiFi.channel();
+    prefs.putUChar("canal", canalActual);
+    configTime(0, 0, "pool.ntp.org", "time.google.com");   // hora real para los mensajes
+    Serial.printf("[WIFI] Conectado a \"%s\"  IP=%s  canal %d\n", redSsid.c_str(),
+                  WiFi.localIP().toString().c_str(), canalActual);
+    latidoLoraForzado = 1;                       // avisar el canal a la otra radio
+  } else if (modoOnline) {
+    Serial.println("[WIFI] Sin conexión con el router (reintentando...)");
+  }
+  version++;
+}
+
+// Un mensaje en JSON para la página web
+String msgJson(const Msg& m) {
+  String x = (m.tipo == AUDIO) ? "🎤 Nota de voz" : (m.tipo == FOTO) ? "📷 Foto" : m.texto;
+  return "{\"de\":" + String(m.de) + ",\"id\":" + String(m.id) + ",\"t\":" + String(m.tipo) +
+         ",\"e\":" + String(m.estado) + ",\"via\":\"" + String(m.via) + "\",\"ts\":" + String(m.ts) +
+         ",\"x\":\"" + jsonEsc(x) + "\"}";
+}
 
 void publicarMsg(const Msg& m) {
-#if ES_BASE
-  if (!mqtt.connected()) return;
-  String x = (m.tipo == AUDIO) ? "🎤 Nota de voz" : (m.tipo == FOTO) ? "📷 Foto" : m.texto;
-  String j = "{\"de\":" + String(m.de) + ",\"id\":" + String(m.id) + ",\"t\":" + String(m.tipo) +
-             ",\"via\":\"" + String(m.via) + "\",\"x\":\"" + jsonEsc(x) + "\"}";
-  mqtt.publish(T("radio/msg").c_str(), j.c_str());
-#endif
+  if (!online() || !mqtt.connected()) return;
+  mqtt.publish(T("radio/msg").c_str(), msgJson(m).c_str());
 }
 
 // Lee el DHT11 cada 30 s y lo envía a la otra estación (cerca: ESP-NOW, lejos: LoRa)
@@ -808,7 +938,7 @@ void manejarClima() {
 void setup() {
   Serial.begin(115200);
   delay(300);
-  Serial.printf("\n=== RADIO EQUIPO %d %s===\n", EQUIPO, ES_BASE ? "(BASE) " : "");
+  Serial.printf("\n=== RADIO EQUIPO %d ===\n", EQUIPO);
   pinMode(LED_PIN, OUTPUT);
   pinMode(BOTON_SOS, INPUT_PULLUP);
   siguienteId = esp_random() % 50000 + 1;         // al azar: evita repetidos tras reiniciar
@@ -830,24 +960,29 @@ void setup() {
 
   loraIniciar();
 
-  // WiFi: punto de acceso para el celular (+ conexión a casa si es BASE)
-  WiFi.mode(WIFI_AP_STA);
-  uint8_t canal = CANAL_WIFI;
-#if ES_BASE
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  Serial.print("Conectando al WiFi de casa");
-  for (int i = 0; i < 60 && WiFi.status() != WL_CONNECTED; i++) { delay(250); Serial.print("."); }
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    canal = WiFi.channel();
-    Serial.printf("WiFi OK. >>> CANAL %d: ponlo en CANAL_WIFI de la otra placa\n", canal);
-  } else Serial.println("Sin WiFi de casa: la radio funciona igual, sin la web");
+  // Modo guardado (sin internet / con internet) y red WiFi elegida en el menú
+  prefs.begin("radio", false);
+  modoOnline  = prefs.getBool("online", false);
+  redSsid     = prefs.getString("ssid", "");
+  redClave    = prefs.getString("clave", "");
+  canalActual = prefs.getUChar("canal", CANAL_WIFI);
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setCallback(onMqtt);
-  mqtt.setBufferSize(512);
-#endif
+  mqtt.setBufferSize(8192);                       // espacio para el historial del chat
+
+  // WiFi: red propia para el celular (+ conexión al router en modo con internet)
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.persistent(false);                         // la red la guardamos nosotros (Preferences)
   String nombre = "Radio-" + String(EQUIPO);
-  WiFi.softAP(nombre.c_str(), CLAVE_AP, canal);
+  WiFi.softAP(nombre.c_str(), CLAVE_AP, canalActual);
+  if (modoOnline && redSsid.length()) {
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(redSsid.c_str(), redClave.c_str()); // no bloquea: la conexión sigue en segundo plano
+    Serial.printf("[MODO] Con internet: conectando a \"%s\"...\n", redSsid.c_str());
+  } else {
+    modoOnline = false;
+    Serial.println("[MODO] Sin internet");
+  }
   esp_wifi_set_ps(WIFI_PS_NONE);
   Serial.printf("WiFi para el celular: %s / %s -> abre http://192.168.4.1\n", nombre.c_str(), CLAVE_AP);
 
@@ -895,8 +1030,10 @@ void loop() {
 
   // Latidos: "estoy aquí"
   static uint32_t latidoEsp = 0, latidoLora = 0;
-  if (millis() - latidoEsp > 2000) { latidoEsp = millis(); espEnviarTexto("P," + String(EQUIPO)); }
-  if (millis() - latidoLora > 30000 + EQUIPO * 1500) { latidoLora = millis(); loraEnviar("P," + String(EQUIPO)); }
+  if (millis() - latidoEsp > 2000) { latidoEsp = millis(); espEnviarTexto(tramaLatido()); }
+  if (latidoLoraForzado || millis() - latidoLora > 30000 + EQUIPO * 1500) {
+    latidoLoraForzado = 0; latidoLora = millis(); loraEnviar(tramaLatido());
+  }
 
   // ¿Se perdió el enlace cercano? avisar a la web
   static bool cercaAntes = false;
@@ -924,7 +1061,6 @@ void loop() {
     else linea += c;
   }
 
-#if ES_BASE
+  revisarRed();
   mqttLoop();
-#endif
 }
