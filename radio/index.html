@@ -19,11 +19,12 @@
   .pill.off{background:rgba(217,56,56,.15);color:var(--bad)}
   main{max-width:900px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
   .grid{min-width:0}
-  #grafCard .tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
-  #grafCard .tab{font-size:12px;padding:5px 11px;border-radius:99px;background:var(--line);color:var(--mu);border:0;font-weight:600}
-  #grafCard .tab.sel{background:var(--az);color:#ffffff}
-  #grafCard .ley{margin-left:auto;font-size:12px;color:var(--mu)}
-  #gSvg{width:100%;height:220px;display:block}
+  #grafCard .ley{font-size:12px;color:var(--mu);margin:-4px 0 10px}
+  .graf{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .gbox{border:1px solid var(--line);border-radius:12px;padding:10px 10px 4px;min-width:0}
+  .gbox h3{margin:0 0 2px;font-size:13px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;white-space:nowrap}
+  .gbox h3 span{font-weight:600;color:var(--mu);font-size:12px}
+  .gbox svg{width:100%;height:150px;display:block}
   .sens{width:100%;border-collapse:collapse;font-size:14px}
   .sens th{font-size:12px;color:var(--mu);font-weight:600;text-align:right;padding:2px 0 6px}
   .sens td{padding:4px 0;border-top:1px solid var(--line);white-space:nowrap}
@@ -110,10 +111,16 @@
   </div>
 
   <section class="card" id="grafCard">
-    <h2>📈 Historial (última hora)</h2>
-    <div class="tabs"><button class="tab sel" data-k="t">Temperatura</button><button class="tab" data-k="h">Humedad</button><button class="tab" data-k="g">Gas</button><button class="tab" data-k="f">Llama</button><button class="tab" data-k="w">Agua</button><button class="tab" data-k="p">Presión</button>
-      <span class="ley"><b style="color:#1f7ae0">━</b> Estación 1 &nbsp;<b style="color:#e08600">━</b> Estación 2</span></div>
-    <svg id="gSvg"></svg>
+    <h2>📈 Sensores · última hora</h2>
+    <div class="ley"><b style="color:#1f7ae0">━</b> Radio 1 &nbsp;&nbsp;<b style="color:#e08600">━</b> Radio 2 &nbsp;·&nbsp; una gráfica por sensor</div>
+    <div class="graf">
+      <div class="gbox"><h3>🌡 Temperatura <span id="gv_t">—</span></h3><svg id="g_t"></svg></div>
+      <div class="gbox"><h3>💧 Humedad <span id="gv_h">—</span></h3><svg id="g_h"></svg></div>
+      <div class="gbox"><h3>🧭 Presión <span id="gv_p">—</span></h3><svg id="g_p"></svg></div>
+      <div class="gbox"><h3>💨 Gas / humo <span id="gv_g">—</span></h3><svg id="g_g"></svg></div>
+      <div class="gbox"><h3>🔥 Llama <span id="gv_f">—</span></h3><svg id="g_f"></svg></div>
+      <div class="gbox"><h3>🌊 Agua <span id="gv_w">—</span></h3><svg id="g_w"></svg></div>
+    </div>
   </section>
 
   <section class="card">
@@ -173,29 +180,34 @@ function mostrarDist(d) {
   $("distSub").textContent = "Estimada por RSSI vía " + (d.via == "E" ? "ESP-NOW" : "LoRa") + " · valor aproximado";
 }
 // --- historial y gráfica (se acumula mientras la página está abierta) ---
-let hist = [], gK = "t";
+let hist = [];
 const gUni = { t: "°C", h: "%", g: "%", f: "%", w: "%", p: "hPa" };
-function graficar() {
-  const svg = $("gSvg"), W = svg.clientWidth || 600, H = 220, L = 40, R = 10, T = 10, B = 22, ahora = Date.now();
+const gDec = { t: 1, h: 0, g: 0, f: 0, w: 0, p: 1 };
+// rango mínimo visible de cada gráfica (evita que el ruido parezca un cambio grande)
+const gRango = { t: [null, null, 4], h: [0, 100, 0], g: [0, 100, 0], f: [0, 100, 0], w: [0, 100, 0], p: [null, null, 6] };
+function graficarUna(k) {
+  const svg = $("g_" + k); if (!svg) return;
+  const W = svg.clientWidth || 300, H = 150, L = 38, R = 8, T = 8, B = 20, ahora = Date.now();
   svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-  const ser = [["1", "#1f7ae0"], ["2", "#e08600"]].map(([n, c]) => ({ c,
-    p: hist.filter(q => q[n] && q[n][gK] != null).map(q => [(q.ms - ahora) / 60000, q[n][gK]]).filter(q => q[0] >= -60) }));
+  const ser = [["1", "#1f7ae0"], ["2", "#e08600"]].map(([n, c]) => ({ n, c,
+    p: hist.filter(q => q[n] && q[n][k] != null).map(q => [(q.ms - ahora) / 60000, q[n][k]]).filter(q => q[0] >= -60) }));
   const ys = ser.flatMap(s => s.p.map(q => q[1]));
-  if (!ys.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#5f6f7f" font-size="13" text-anchor="middle">0 datos · sin enlace con las estaciones</text>'; return; }
-  let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 2) { lo -= 1; hi += 1; }
-  const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - v) / (hi - lo) * (H - T - B);
+  const ult = ser.map(s => s.p.length ? "R" + s.n + ": " + s.p[s.p.length - 1][1].toFixed(gDec[k]) + " " + gUni[k] : "").filter(Boolean);
+  $("gv_" + k).textContent = ult.length ? ult.join(" · ") : "sin datos";
+  if (!ys.length) { svg.innerHTML = '<text x="' + W / 2 + '" y="' + H / 2 + '" fill="#5f6f7f" font-size="12" text-anchor="middle">0 datos · sin enlace o sin sensor</text>'; return; }
+  let [lo, hi, min] = gRango[k];
+  if (lo == null) { lo = Math.min(...ys); hi = Math.max(...ys); const m = (lo + hi) / 2; if (hi - lo < min) { lo = m - min / 2; hi = m + min / 2; } }
+  const xs = v => L + (v + 60) / 60 * (W - L - R), yy = v => T + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - T - B);
   let h = "";
-  for (let i = 0; i <= 3; i++) { const v = lo + (hi - lo) * i / 3, y = yy(v).toFixed(1);
-    h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e1e6ed"/><text x="' + (L - 6) + '" y="' + (+y + 4) + '" fill="#5f6f7f" font-size="11" text-anchor="end">' + v.toFixed(gK == "t" ? 1 : 0) + '</text>'; }
-  [-60, -45, -30, -15, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 5) + '" fill="#5f6f7f" font-size="11" text-anchor="' + (m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
+  for (let i = 0; i <= 2; i++) { const v = lo + (hi - lo) * i / 2, y = yy(v).toFixed(1);
+    h += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e1e6ed"/><text x="' + (L - 5) + '" y="' + (+y + 4) + '" fill="#5f6f7f" font-size="10" text-anchor="end">' + v.toFixed(gDec[k]) + '</text>'; }
+  [-60, -30, 0].forEach(m => h += '<text x="' + xs(m) + '" y="' + (H - 4) + '" fill="#5f6f7f" font-size="10" text-anchor="' + (m == -60 ? "start" : m ? "middle" : "end") + '">' + (m ? m + " min" : "ahora") + '</text>');
   ser.forEach(s => { if (!s.p.length) return;
-    h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2.2" points="' + s.p.map(q => xs(q[0]).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
-    const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3.5" fill="' + s.c + '"/>'; });
-  h += '<text x="' + (W - R) + '" y="' + (T + 12) + '" fill="#5f6f7f" font-size="11" text-anchor="end">' + gUni[gK] + '</text>';
+    h += '<polyline fill="none" stroke="' + s.c + '" stroke-width="2" stroke-linejoin="round" points="' + s.p.map(q => xs(q[0]).toFixed(1) + "," + yy(q[1]).toFixed(1)).join(" ") + '"/>';
+    const u = s.p[s.p.length - 1]; h += '<circle cx="' + xs(u[0]) + '" cy="' + yy(u[1]) + '" r="3" fill="' + s.c + '"/>'; });
   svg.innerHTML = h;
 }
-document.querySelectorAll("#grafCard .tab").forEach(b => b.onclick = () => {
-  gK = b.dataset.k; document.querySelectorAll("#grafCard .tab").forEach(x => x.classList.toggle("sel", x == b)); graficar(); });
+function graficar() { ["t", "h", "p", "g", "f", "w"].forEach(graficarUna); }
 window.addEventListener("resize", graficar);
 
 // Tarjeta de clima: 0 °C · 0 % cuando no hay datos de una estación

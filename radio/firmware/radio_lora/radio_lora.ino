@@ -55,14 +55,15 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 // Sensor de gas MQ (salida analógica AO con divisor de voltaje 5 V -> 3.3 V)
 #define USAR_GAS       1                    // 1 = esta estación tiene sensor MQ, 0 = no
 #define GAS_PIN        34                   // punto medio del divisor -> D34 (GPIO34)
-#define GAS_ALARMA     60                   // % a partir del cual se envía SOS automático
+#define GAS_ALARMA     40                   // % SOBRE el aire limpio a partir del cual se envía SOS
 #define GAS_CALENTAR_MS 60000               // el sensor necesita ~1 min para calentarse
 
 // Sensor de llama (infrarrojo, módulo LM393 de 4 pines: AO, G, +, DO). Funciona a 3.3 V.
 #define USAR_FUEGO      1                   // 1 = esta estación tiene sensor de llama, 0 = no
 #define FUEGO_AO        35                  // AO -> D35 (GPIO35): intensidad de la llama
 #define FUEGO_DO        27                  // DO -> D27 (GPIO27): detección (umbral del tornillo azul)
-#define FUEGO_ACTIVO_BAJO 1                 // 1 = DO pasa a LOW al detectar llama (lo normal en este módulo)
+#define FUEGO_ACTIVO_BAJO 1                 // (ya no se usa: el nivel de reposo de DO se detecta solo al encender)
+#define FUEGO_MIN_AO    15                  // % mínimo de AO (sobre su reposo) para confirmar la llama
 #define FUEGO_USAR_AO   1                   // 1 = AO conectado (intensidad en %); 0 = solo DO (0 % / 100 %)
 
 // Sensor de nivel de agua (Keyestudio, pines S, +, -). Se alimenta desde un pin del ESP32
@@ -70,6 +71,7 @@ const char* TOPIC_PREFIX = "panarepara-radio-acbdcce2";  // prefijo MQTT único 
 #define USAR_AGUA       1                   // 1 = esta estación tiene sensor de agua, 0 = no
 #define AGUA_PIN        32                  // S -> D32 (GPIO32): nivel
 #define AGUA_VCC        33                  // + -> D33 (GPIO33): alimentación encendida solo al medir
+#define TEMP_AJUSTE     0.0                 // corrección fija de temperatura en °C (ej. -1.5 si marca de más)
 #define AGUA_ALARMA     50                  // % de nivel a partir del cual se envía SOS
 
 // Sensor de presión BME280 / BMP280 (I2C): VIN -> 3V3, GND, SCL -> D22, SDA -> D21.
@@ -937,22 +939,59 @@ void publicarMsg(const Msg& m) {
 }
 
 // Lee el DHT11 cada 30 s y lo envía a la otra estación (cerca: ESP-NOW, lejos: LoRa)
-// Lee el sensor de gas: promedio de 16 lecturas, en % de la escala (0-100)
-float leerGas() {
+// ---------- Calibración automática ----------
+// GAS: el MQ da una tensión distinta en cada módulo y en cada ambiente. Al terminar de
+// calentarse se toma el aire actual como "aire limpio" (0 %). Esa base baja enseguida si la
+// lectura baja y sube muy despacio (solo con lecturas casi limpias), así el gas real no se
+// "absorbe". El % es cuánto sube la lectura sobre el aire limpio.
+float gasBase = -1;                               // lectura cruda del aire limpio (0-4095)
+float gasCrudo() {
   uint32_t suma = 0;
-  for (int i = 0; i < 16; i++) { suma += analogRead(GAS_PIN); delay(2); }
-  return (suma / 16.0f) * 100.0f / 4095.0f;
+  for (int i = 0; i < 32; i++) { suma += analogRead(GAS_PIN); delay(2); }
+  return suma / 32.0f;
+}
+float leerGas() {
+  float r = gasCrudo();
+  if (millis() < GAS_CALENTAR_MS) return 0;       // calentando: todavía no es fiable
+  if (gasBase < 0 || r < gasBase) gasBase = r;    // primera lectura o el aire está más limpio
+  float g = (r - gasBase) * 100.0f / max(4095.0f - gasBase, 400.0f);
+  if (g < 5) gasBase += (r - gasBase) * 0.02f;    // seguimiento lento del aire limpio
+  if (g < 2) g = 0;                               // ruido del ADC
+  Serial.printf("[GAS] crudo %.0f  base %.0f  ->  %.0f %%\n", r, gasBase, g);
+  return constrain(g, 0, 100);
 }
 
-// Intensidad de la llama en % (0 = nada, 100 = muy cerca). En este módulo la tensión de AO
-// BAJA cuando aumenta la luz infrarroja, por eso se invierte.
-float leerFuego() {
-  if (!FUEGO_USAR_AO) return climaYo.fuego ? 100 : 0;   // solo DO: hay llama o no
+// LLAMA: al encender se mide cómo está DO y AO SIN llama (reposo). Llama = DO cambia de su
+// nivel de reposo Y (si AO está conectado) AO se aleja al menos FUEGO_MIN_AO % de su reposo.
+int fuegoReposoDO = HIGH;                         // nivel de DO sin llama (se detecta al encender)
+float fuegoBaseAO = -1;                           // AO sin llama (0-4095)
+float fuegoCrudo() {
   uint32_t suma = 0;
   for (int i = 0; i < 8; i++) { suma += analogRead(FUEGO_AO); delay(1); }
-  return 100.0f - (suma / 8.0f) * 100.0f / 4095.0f;
+  return suma / 8.0f;
 }
-bool llamaDetectada() { return digitalRead(FUEGO_DO) == (FUEGO_ACTIVO_BAJO ? LOW : HIGH); }
+void calibrarFuego() {
+  int altos = 0; float sumaAO = 0;
+  for (int i = 0; i < 50; i++) { altos += digitalRead(FUEGO_DO); sumaAO += fuegoCrudo(); delay(20); }
+  fuegoReposoDO = altos >= 25 ? HIGH : LOW;
+  fuegoBaseAO = sumaAO / 50;
+  Serial.printf("[FUEGO] calibrado: DO en reposo = %s, AO en reposo = %.0f\n",
+                fuegoReposoDO ? "HIGH" : "LOW", fuegoBaseAO);
+}
+// Intensidad de la llama en % (0 = nada, 100 = muy cerca), relativa al reposo
+float leerFuego() {
+  if (!FUEGO_USAR_AO) return climaYo.fuego ? 100 : 0;   // solo DO: hay llama o no
+  float r = fuegoCrudo();
+  float d = fabsf(fuegoBaseAO - r);
+  float f = d * 100.0f / max(max(fuegoBaseAO, 4095.0f - fuegoBaseAO), 400.0f);
+  if (f < 5 && !climaYo.fuego) fuegoBaseAO += (r - fuegoBaseAO) * 0.05f;   // sigue la luz ambiente
+  if (f < 3) f = 0;
+  return constrain(f, 0, 100);
+}
+bool llamaDetectada() {
+  if (digitalRead(FUEGO_DO) == fuegoReposoDO) return false;
+  return !FUEGO_USAR_AO || leerFuego() >= FUEGO_MIN_AO;
+}
 
 uint32_t proximoClima = 3000;                     // próxima lectura de sensores (primera a los 3 s)
 
@@ -1010,6 +1049,7 @@ void manejarClima() {
     Serial.println("!! DHT11 sin lectura: revisa VCC->3V3, DAT->D4 (GPIO4) y GND");
     climaYo.okTH = false;
   } else {
+    t += TEMP_AJUSTE;
     climaYo.okTH = true; climaYo.t = t; climaYo.h = h;
     ts = String(t, 1); hs = String(h, 0);
   }
@@ -1020,7 +1060,8 @@ void manejarClima() {
   gs = String(g, 0);
   static bool alarmaGas = false;
   if (millis() < GAS_CALENTAR_MS) {
-    Serial.println("[GAS] calentando el sensor...");
+    climaYo.okGas = false; gs = "x";              // sin dato hasta que se caliente
+    Serial.println("[GAS] calentando el sensor (1 min)...");
   } else if (!alarmaGas && g >= GAS_ALARMA) {
     alarmaGas = true;
     enviarMensaje(SOS, "SOS: gas detectado (" + gs + " %)");
@@ -1037,12 +1078,16 @@ void manejarClima() {
   if (tipoBaro) {
     float p = (tipoBaro == 1 ? bme.readPressure() : bmp.readPressure()) / 100.0f;   // Pa -> hPa
     if (p > 300 && p < 1200) { climaYo.okP = true; climaYo.p = p; ps = String(p, 1); }
-    // Sin DHT11 (o si falló), la temperatura (y la humedad del BME280) salen de este sensor
-    if (!climaYo.okTH || !USAR_DHT) {
-      float t = tipoBaro == 1 ? bme.readTemperature() : bmp.readTemperature();
-      float h = tipoBaro == 1 ? bme.readHumidity() : NAN;
-      if (!isnan(t)) { climaYo.okTH = true; climaYo.t = t; climaYo.h = isnan(h) ? 0 : h; ts = String(t, 1); hs = isnan(h) ? "0" : String(h, 0); }
+    // La temperatura del BME/BMP280 (±1 °C) es más exacta que la del DHT11 (±2 °C): se usa esa.
+    // La humedad sigue saliendo del DHT11 (o del BME280 si no hay DHT11).
+    float t = (tipoBaro == 1 ? bme.readTemperature() : bmp.readTemperature()) + TEMP_AJUSTE;
+    float h = tipoBaro == 1 ? bme.readHumidity() : NAN;
+    if (!isnan(t) && t > -20 && t < 70) {
+      climaYo.t = t; ts = String(t, 1);
+      if (!climaYo.okTH) { climaYo.okTH = true; climaYo.h = isnan(h) ? 0 : h; hs = isnan(h) ? "0" : String(h, 0); }
     }
+  } else {
+    Serial.println("!! Presión: no hay BME/BMP280 (mira el mensaje [I2C] al encender)");
   }
 #endif
 #if USAR_AGUA
@@ -1086,13 +1131,25 @@ void setup() {
   analogSetPinAttenuation(GAS_PIN, ADC_11db);     // rango completo 0-3.3 V
 #endif
 #if USAR_FUEGO
-  pinMode(FUEGO_DO, FUEGO_ACTIVO_BAJO ? INPUT_PULLUP : INPUT_PULLDOWN);   // sin sensor: no da falsas alarmas
+  pinMode(FUEGO_DO, INPUT_PULLUP);
   analogSetPinAttenuation(FUEGO_AO, ADC_11db);
+  calibrarFuego();                                // ¡encender SIN llama cerca!
 #endif
 #if USAR_PRESION
   Wire.begin(21, 22);                             // SDA = D21, SCL = D22
-  if (bme.begin(0x76) || bme.begin(0x77)) tipoBaro = 1;
-  else if (bmp.begin(0x76) || bmp.begin(0x77)) tipoBaro = 2;
+  // Busca el sensor en 0x76 y 0x77 y lee su chip ID: 0x60 = BME280, 0x56/0x57/0x58 = BMP280
+  for (uint8_t dir = 0x76; dir <= 0x77 && !tipoBaro; dir++) {
+    Wire.beginTransmission(dir);
+    if (Wire.endTransmission() != 0) { Serial.printf("[I2C] 0x%02X: nada\n", dir); continue; }
+    Wire.beginTransmission(dir); Wire.write(0xD0); Wire.endTransmission();
+    uint8_t id = Wire.requestFrom(dir, (uint8_t)1) == 1 ? Wire.read() : 0;
+    Serial.printf("[I2C] 0x%02X responde, chip ID = 0x%02X\n", dir, id);
+    if (id == 0x60 && bme.begin(dir)) tipoBaro = 1;
+    else if ((id == 0x56 || id == 0x57 || id == 0x58) && bmp.begin(dir, id)) tipoBaro = 2;
+  }
+  if (!tipoBaro) {                                // ¿hay algo más en el bus? (ayuda a diagnosticar)
+    for (uint8_t a = 1; a < 127; a++) { Wire.beginTransmission(a); if (Wire.endTransmission() == 0) Serial.printf("[I2C] dispositivo en 0x%02X\n", a); }
+  }
   Serial.println(tipoBaro == 1 ? "Sensor BME280 listo (presión, temperatura, humedad)" :
                  tipoBaro == 2 ? "Sensor BMP280 listo (presión, temperatura)" :
                  "!! No se encontró el BME280/BMP280: revisa VIN->3V3, SDA->D21, SCL->D22");
