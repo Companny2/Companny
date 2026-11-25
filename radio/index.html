@@ -225,7 +225,8 @@ function dibujarChat() {
   const log = $("log"), abajo = log.scrollHeight - log.scrollTop - log.clientHeight < 60;
   log.querySelectorAll(".m").forEach(n => n.remove());
   $("vacio").style.display = chat.size ? "none" : "";
-  for (const m of chat.values()) {
+  const lista = [...chat.values()].sort((x, y) => (x.ts || x.llego / 1000) - (y.ts || y.llego / 1000));   // orden por hora
+  for (const m of lista) {
     const d = document.createElement("div");
     d.className = "m" + (m.de == 0 ? " web" : " r" + m.de) + (m.t == 1 ? " sos" : "");
     const s = document.createElement("small");
