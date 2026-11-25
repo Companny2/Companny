@@ -130,9 +130,9 @@ function crear(m) {
 // --- dibujar el estado completo ---
 function pintar(j) {
   $("tit").textContent = "Radio " + j.yo;
-  const c = $("cCerca"); c.textContent = "⚡ Cerca: " + (j.cerca.on ? j.cerca.rssi + " dBm" : "fuera de alcance"); c.className = "chip" + (j.cerca.on ? " on" : "");
+  const c = $("cCerca"); c.textContent = "⚡ Cercano (fotos/voz): " + (j.cerca.on ? j.cerca.rssi + " dBm" : "no disponible"); c.className = "chip" + (j.cerca.on ? " on" : "");
   const l = $("cLora");
-  l.textContent = "📡 LoRa: " + (!j.lora.ok ? "sin módulo" : j.lora.on ? j.lora.rssi + " dBm · SNR " + j.lora.snr : "esperando…");
+  l.textContent = "📡 LoRa (principal): " + (!j.lora.ok ? "sin módulo" : j.lora.on ? j.lora.rssi + " dBm · SNR " + j.lora.snr : "esperando…");
   l.className = "chip" + (j.lora.on ? " lo" : "");
   if ("web" in j) { const w = $("cWeb"); w.style.display = ""; w.className = "chip" + (j.web ? " on" : ""); w.textContent = "🌐 Web: " + (j.web ? "conectada" : "sin conexión"); }
   const cl = j.clima || {}, fc = x => !x ? "sin datos" : [x.t != null ? x.t + "°C · " + x.h + "%" : "", x.g != null ? "gas " + x.g + "%" : ""].filter(Boolean).join(" · ");

@@ -74,12 +74,12 @@
       <div class="sub" id="baseSub">Radio 1: sin enlace · Radio 2: sin enlace</div>
     </section>
     <section class="card">
-      <h2>⚡ Enlace cercano <span id="stCerca" class="pill off">Sin enlace</span></h2>
+      <h2>⚡ Cercano (fotos/voz) <span id="stCerca" class="pill off">Sin enlace</span></h2>
       <div class="big" id="cercaRssi">0<span> dBm</span></div>
-      <div class="sub">ESP-NOW: texto, fotos y notas de voz</div>
+      <div class="sub">ESP-NOW: fotos, notas de voz y respaldo</div>
     </section>
     <section class="card">
-      <h2>📡 Enlace LoRa <span id="stLora" class="pill off">Sin enlace</span></h2>
+      <h2>📡 LoRa (principal) <span id="stLora" class="pill off">Sin enlace</span></h2>
       <div class="big" id="loraRssi">0<span> dBm</span></div>
       <div class="sub" id="loraSnr">SNR 0 dB · sin datos</div>
     </section>
@@ -206,7 +206,7 @@ function mostrarEstado(e, vivo) {
   $("baseTxt").innerHTML = (otraOn ? 2 : 1) + "<span> " + (otraOn ? "estaciones" : "estación") + "</span>";
   $("baseSub").textContent = "Radio " + rb + ": en línea (internet) · Radio " + ro + ": " +
     (e.cerca.on ? "en línea ⚡ cerca" : e.lora.on ? "en línea 📡 LoRa" : "sin enlace");
-  pill($("stCerca"), e.cerca.on, "Cerca", "Fuera de alcance");
+  pill($("stCerca"), e.cerca.on, "Disponible", "No disponible");
   $("cercaRssi").innerHTML = (e.cerca.on ? e.cerca.rssi : 0) + "<span> dBm</span>";
   pill($("stLora"), e.lora.on, "Activo", "Sin señal", "lo");
   $("loraRssi").innerHTML = (e.lora.on ? e.lora.rssi : 0) + "<span> dBm</span>";

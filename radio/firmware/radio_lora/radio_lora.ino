@@ -27,6 +27,7 @@
 // WiFi que crea la placa para tu celular
 const char* CLAVE_AP = "radio1234";        // mínimo 8 caracteres
 #define CANAL_WIFI 1                       // canal inicial; luego se ajusta solo
+#define PREFERIR_LORA 1                    // 1 = texto, SOS y sensores SIEMPRE por LoRa (ESP-NOW solo fotos/voz y respaldo)
 
 // Modo CON internet (la red WiFi se elige desde el menú del celular)
 const char* MQTT_HOST    = "broker.hivemq.com";
@@ -122,6 +123,7 @@ uint32_t version = 1;          // cambia cada vez que algo cambia (para la web)
 struct Pendiente {
   uint16_t id; uint8_t tipo; String texto;
   char via; uint8_t intentos; uint32_t t;
+  bool otraVia;       // ya se probó la vía alternativa
 };
 std::vector<Pendiente> pendientes;
 
@@ -370,7 +372,12 @@ void procesarTramaTexto(const String& s, char via, int rssi) {
 
   if (tipoTrama == 'P') {                         // latido: P,<de>,<canal>,<con internet 0/1>
     int c2 = s.indexOf(',', c1 + 1);
-    if (c1 > 0 && c2 > 0 && s.substring(c2 + 1) == "1") seguirCanal(s.substring(c1 + 1, c2).toInt(), de);
+    if (c1 > 0 && c2 > 0) {
+      bool otroOnline = s.substring(c2 + 1) == "1";
+      // Se sigue el canal de la radio con internet; si ninguna tiene, la Radio 2 sigue a la Radio 1
+      if (otroOnline || de < EQUIPO) seguirCanal(s.substring(c1 + 1, c2).toInt(), de);
+      if (via == 'L' && !cerca()) pedirLatidoLora();       // responder rápido para reenganchar ESP-NOW
+    }
     return;
   }
 
@@ -427,7 +434,7 @@ void enviarMensaje(uint8_t tipo, String texto, uint8_t de = EQUIPO) {
   texto = limpiar(texto);
   if (!texto.length()) return;
   uint16_t id = siguienteId++;
-  char via = cerca() ? 'E' : 'L';
+  char via = (PREFERIR_LORA && loraOk) ? 'L' : (cerca() ? 'E' : 'L');   // LoRa es la vía principal
   Msg m{id, de, true, tipo, ENVIANDO, via, 0, 0, texto};
   agregar(m);
   publicarMsg(m);
@@ -447,11 +454,12 @@ void revisarPendientes() {
 
     bool reintentar = true;
     if (p.via == 'E') {
-      if (p.intentos < 2 && cerca()) p.intentos++;             // otra vez cerca
-      else if (loraOk) { p.via = 'L'; p.intentos = 1; }        // saltar a LoRa
+      if (p.intentos < 2 && cerca()) p.intentos++;                               // otra vez cerca
+      else if (loraOk && !p.otraVia) { p.via = 'L'; p.intentos = 1; p.otraVia = true; }  // pasar a LoRa
       else reintentar = false;
     } else {
-      if (p.intentos < 3) p.intentos++;
+      if (p.intentos < 3) p.intentos++;                                          // otro intento LoRa
+      else if (cerca() && !p.otraVia) { p.via = 'E'; p.intentos = 1; p.otraVia = true; } // respaldo cercano
       else reintentar = false;
     }
 
@@ -814,6 +822,7 @@ void mqttLoop() {
 // Latido: P,<equipo>,<canal>,<con internet>. La otra radio usa el canal para seguirnos.
 String tramaLatido() { return "P," + String(EQUIPO) + "," + String(canalActual) + "," + (online() ? "1" : "0"); }
 uint32_t latidoLoraForzado = 0;                // para avisar enseguida un cambio de canal
+void pedirLatidoLora() { latidoLoraForzado = 1; }
 
 // Cambia el canal WiFi para coincidir con la otra radio cuando ella tiene internet
 void seguirCanal(int canal, uint8_t de) {
@@ -927,8 +936,8 @@ void manejarClima() {
   version++;
   Serial.printf("[CLIMA] %s C  %s %%  gas %s %%\n", ts.c_str(), hs.c_str(), gs.c_str());
   String trama = "C," + String(EQUIPO) + "," + ts + "," + hs + "," + gs;
-  if (cerca()) espEnviarTexto(trama);
-  else loraEnviar(trama);
+  if ((PREFERIR_LORA && loraOk) || !cerca()) loraEnviar(trama);   // sensores: por LoRa
+  else espEnviarTexto(trama);
 #endif
 }
 
@@ -999,6 +1008,7 @@ void setup() {
   } else Serial.println("!! Error iniciando ESP-NOW");
 
   iniciarWeb();
+  latidoLoraForzado = 1;                         // anunciarse por LoRa al encender
   Serial.println("Listo.");
 }
 
@@ -1029,10 +1039,21 @@ void loop() {
   rxLoop();
 
   // Latidos: "estoy aquí"
+  // LoRa: cada 30 s; cada 10 s si no hay enlace cercano (para reenganchar el canal);
+  // un latido pedido se envía como máximo cada 8 s (evita rebotes entre las radios)
   static uint32_t latidoEsp = 0, latidoLora = 0;
   if (millis() - latidoEsp > 2000) { latidoEsp = millis(); espEnviarTexto(tramaLatido()); }
-  if (latidoLoraForzado || millis() - latidoLora > 30000 + EQUIPO * 1500) {
+  uint32_t periodo = (cerca() ? 30000 : 10000) + EQUIPO * 1500;
+  if ((latidoLoraForzado && millis() - latidoLora > 8000) || millis() - latidoLora > periodo) {
     latidoLoraForzado = 0; latidoLora = millis(); loraEnviar(tramaLatido());
+  }
+
+  // Estado de los enlaces en el Monitor serie cada 30 s
+  static uint32_t ultimoInforme = 0;
+  if (millis() - ultimoInforme > 30000) {
+    ultimoInforme = millis();
+    Serial.printf("[ENLACE] canal %d · LoRa: %s (%d dBm) · cercano: %s · internet: %s\n", canalActual,
+                  loraVivo() ? "OK" : "sin señal", loraRssi, cerca() ? "OK" : "no", online() ? "sí" : "no");
   }
 
   // ¿Se perdió el enlace cercano? avisar a la web
